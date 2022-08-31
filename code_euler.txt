@@ -1,0 +1,172 @@
+%( the following CASL code up to the colimit (line 115),
+can be copied and executed online in http://rest.hets.eu/ to give rise 
+to various specifications of image schemas and the Euler diagram geometry.
+Then by clicking: commands > compute colimit
+one can reproduce the colimit=blend we present here.
+After the blend, we also present some proof obligations,
+i.e., additional formulas that are entailed by the axioms of the blend )%
+
+
+spec CONTAINMENT =
+
+sorts 
+    Boundary < Object; %( only works like this )%
+    Region, ContainerSchema
+    %( ContainerSchema sort corresponds to the entire configuration defined in the specification = schema gestalt )%
+
+ops 
+    %( operations listed below are functions, so each instance of a sort on the left would be mapped to exactly one instance of the sort on the right )%
+
+    inside: ContainerSchema -> Region
+    outside: ContainerSchema -> Region
+    boundary: ContainerSchema -> Boundary
+
+preds
+    locatedAt: Object * Region
+    locatedAt: Boundary * Region
+%axioms%
+
+    forall c1,c2,c3: ContainerSchema; e: Object; l: Region; b: Boundary
+
+        .not(inside(c1)=outside(c1))
+
+        .boundary(c1)=b /\ boundary(c2)=b => c1=c2
+        %( if two Boundaries are the same, then their corresponding ContainerSchema is also the same )%
+
+        .exists! c4: ContainerSchema .boundary(c4)=b
+        %( each Boundary corresponds to exactly one ContainerSchema )%
+
+        %( the following axioms specify what happens when something is located 
+        inside a Boundary and this Boundary is located inside, or outside of, another one )%
+
+        .locatedAt(e,inside(c1)) /\ locatedAt(boundary(c1),inside(c2)) => locatedAt(e,inside(c2))
+    
+        .locatedAt(e,outside(c1)) /\ locatedAt(boundary(c2),inside(c1)) => locatedAt(e,outside(c2))
+    
+        .locatedAt(e,inside(c1)) /\ locatedAt(boundary(c1),outside(c2)) => locatedAt(e,outside(c2))
+
+end
+
+
+spec A_CONTAINMENT = CONTAINMENT then
+
+ops
+    q_bnd, p_bnd, r_bnd: Boundary
+    q_cs, p_cs, r_cs: ContainerSchema    
+    q_in, p_in, r_in: Region
+    q_out, p_out, r_out: Region
+
+%axioms%
+
+    .inside(q_cs)=q_in .outside(q_cs)=q_out .boundary(q_cs)=q_bnd
+    .inside(p_cs)=p_in .outside(p_cs)=p_out .boundary(p_cs)=p_bnd
+    .inside(r_cs)=r_in .outside(r_cs)=r_out .boundary(r_cs)=r_bnd
+
+    .locatedAt(r_bnd,inside(p_cs)) 
+    .locatedAt(q_bnd,outside(p_cs))
+    .locatedAt(p_bnd,outside(q_cs))
+
+end
+
+
+spec AN_EULER_CONFIG =
+
+sorts RegionBoundary
+
+ops
+    Q, P, R: RegionBoundary
+
+preds 
+    Circle: RegionBoundary
+    disjointRR, intersectRR, subset_ofRR: RegionBoundary * RegionBoundary
+    __leftRR__, __rightRR__: RegionBoundary * RegionBoundary
+
+%axioms%
+
+    .Circle(Q) .Circle(P) .Circle(R)
+    
+    .disjointRR(Q,P) .disjointRR(P,Q)
+    .subset_ofRR(R,P)
+
+end
+
+
+spec GENERIC = 
+
+sort Blob
+
+ops 
+    blob_q, blob_p, blob_r: Blob
+
+end
+
+
+view a : GENERIC to A_CONTAINMENT = 
+    Blob |-> Boundary, 
+    blob_q |-> q_bnd, blob_p |-> p_bnd, blob_r |-> r_bnd
+
+
+view b : GENERIC to AN_EULER_CONFIG = 
+    Blob |-> RegionBoundary, 
+    blob_q |-> Q, blob_p |-> P, blob_r |-> R
+
+
+
+spec COLIMIT = 
+
+sorts Blob < Object; ContainerSchema, Object, Region
+
+ops
+
+    p_bnd, q_bnd, r_bnd : Blob
+    p_cs, q_cs, r_cs : ContainerSchema
+    p_in, p_out, q_in, q_out, r_in, r_out : Region
+
+    boundary : ContainerSchema -> Blob
+    inside : ContainerSchema -> Region
+    outside : ContainerSchema -> Region
+
+preds 
+
+    __leftRR__, __rightRR__, disjointRR, intersectRR, subset_ofRR : Blob * Blob
+    Circle : Blob
+    locatedAt : Blob * Region
+    locatedAt : Object * Region
+
+%axioms%
+
+    . Circle(q_bnd) . Circle(p_bnd) . Circle(r_bnd)
+    . disjointRR(q_bnd, p_bnd) . disjointRR(p_bnd, q_bnd)
+    . subset_ofRR(r_bnd, p_bnd)
+    . inside(q_cs) = q_in . outside(q_cs) = q_out . boundary(q_cs) = q_bnd
+    . inside(p_cs) = p_in . outside(p_cs) = p_out . boundary(p_cs) = p_bnd
+    . inside(r_cs) = r_in . outside(r_cs) = r_out . boundary(r_cs) = r_bnd
+    . locatedAt(r_bnd, inside(p_cs)) 
+    . locatedAt(q_bnd, outside(p_cs))
+    . locatedAt(p_bnd, outside(q_cs))
+
+    forall c1 : ContainerSchema . not inside(c1) = outside(c1)
+
+    forall c1, c2 : ContainerSchema; b : Blob
+        . boundary(c1) = b /\ boundary(c2) = b => c1 = c2
+
+    forall b : Blob . exists! c4 : ContainerSchema . boundary(c4) = b
+
+    forall c1, c2 : ContainerSchema; e : Object
+        . locatedAt(e, inside(c1)) /\ locatedAt(boundary(c1), inside(c2))
+            => locatedAt(e, inside(c2))  
+
+    forall c1, c2 : ContainerSchema; e : Object
+        . locatedAt(e, outside(c1)) /\ locatedAt(boundary(c2), inside(c1))
+            => locatedAt(e, outside(c2))  
+
+    forall c1, c2 : ContainerSchema; e : Object
+        . locatedAt(e, inside(c1)) /\ locatedAt(boundary(c1), outside(c2))
+            => locatedAt(e, outside(c2)) 
+
+%proofs%
+
+    .locatedAt(r_bnd, outside(q_cs)) %implied
+    .locatedAt(r_bnd, q_out) %implied
+
+end

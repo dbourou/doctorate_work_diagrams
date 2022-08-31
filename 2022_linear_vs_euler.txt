@@ -1,0 +1,501 @@
+%( the following CASL code up to the blends (line 290)
+can be copied and executed online in http://rest.hets.eu/ to give rise 
+to various specifications of image schemas, the geometry
+of the Linear and Euler diagrams, their semantics,
+and the blends of all 3. For ease of reading,
+we also present the computed blends here already, after line 290.
+After each blend, we also present some proof obligations,
+i.e., additional formulas that are entailed by the axioms of the blend  )%
+
+
+%( a general specification defining all the possible components
+of a geometrical configuration )%
+
+spec GEOM =
+
+sorts Point, Reg, RegBound, RegInt, RegExt, Line, LineBound, LineInt
+
+%( operations listed below are functions, so each instance of a sort on the left would be mapped to exactly one instance of the sort on the right )%
+%( each line has a boundary and an interior,
+each region has a boundary and an interior )%
+
+ops
+    boundaryOf: Line -> LineBound
+    interiorOf: Line -> LineInt
+    boundaryOf: Reg -> RegBound
+    interiorOf: Reg -> RegInt
+
+preds
+
+%( line boundaries, line interiors, region boundaries and region interiors
+can all be related with each other by being front, back, right, left
+of each other, or by intersecting, being disjoint or subsets of each other )%
+
+front, back, right, left, disjoint: LineBound * LineBound
+front, back, right, left, disjoint: LineInt * LineInt
+front, back, right, left, disjoint:  LineBound * LineInt
+right, left, intrsct, subset, disjoint: RegBound * RegBound
+right, left, intrsct, subset, disjoint: RegInt * RegInt
+right, left, intrsct, subset, disjoint: RegBound * RegInt
+intrsct, subset, disjoint: RegBound * RegExt
+intrsct, subset, disjoint: RegInt * RegExt
+
+
+%( a specification defining the constants representing
+the elements of the concrete Linear diagram we are working with.
+this specification extends the general GEOM specification )%
+
+spec LINEAR_DIAGRAM = GEOM then
+   
+%( instantiating a constant of a certain sort
+is declared as a unary operation in CASL.
+here we instantiat the boundaries and interiors of 3 lines,
+corresponding to the geometrical configuration
+of the diagram we are modelling )%
+
+ops
+
+    Ab, Bb, Cb: LineBound
+    Ai, Bi, Ci: LineInt
+
+%axioms%
+
+%( here we declare how the defined constants
+are related by the predicates we defined in the GEOM specification )%
+
+    .front(Ab,Bi)     .front(Ai,Bi)
+    .right(Cb,Bb)     .right(Ci,Bi)     .right(Cb,Bi)
+    .not front(Cb,Bi) .not front(Cb,Bi) .not front(Bb,Ci) .not front(Bi,Ci)
+    .disjoint(Cb,Bb)  .disjoint(Ci,Bi)  .disjoint(Cb,Bi)
+    .disjoint(Ab,Bb)  .disjoint(Ai,Bi)  .disjoint(Ab,Bi)
+
+end
+
+
+%( a specification defining the constants representing
+the elements of the concrete Euler diagram we are working with.
+this specification extends the general GEOM specification )%
+
+spec EULER_DIAGRAM = GEOM then
+    
+ops
+
+    Ab, Bb, Cb: RegBound
+    Ai, Bi, Ci: RegInt
+    Ax, Bx, Cx: RegExt
+
+%axioms%
+
+    .right(Cb,Bb)    .right(Ci,Bi)    .right(Cb,Bi)
+    .disjoint(Cb,Bb) .disjoint(Ci,Bi) .disjoint(Cb,Bi)
+    .subset(Ab,Bi)   .subset(Ai,Bi)   .disjoint(Ab,Bb)
+    .subset(Bb,Cx)   .subset(Bi,Cx)
+
+end
+
+
+
+%( specifications defining the set theoretical semantics )%
+
+spec SEM = 
+
+sort Set
+
+preds 
+    incl: Set * Set
+    disj: Set * Set
+
+%axioms%
+
+.forall p: Set .not incl(p,p)
+.forall p, s: Set .incl(p,s) => not incl(s,p)
+.forall p, s, q: Set .incl(p,s) /\ incl(s,q) => incl(p,q)
+
+.forall p: Set .not disj(p,p)
+.forall p, s: Set .disj(p,s) => disj(s,p)
+
+
+
+spec A_SEM = SEM then
+
+ops a,b,c: Set
+
+.incl(a,b) .disj(b,c)
+
+
+
+
+%( specification of the CONTAINER schema )%
+
+spec CONTAINMENT =
+
+sorts 
+    Boundary < Object; ContainerSchema; In, Out < Region
+    %( ContainerSchema sort corresponds to the entire configuration defined in the specification = schema gestalt )%
+
+ops 
+    %( operations listed below are functions, so each instance of a sort on the left would be mapped to exactly one instance of the sort on the right )%
+
+    inside: ContainerSchema -> In
+    outside: ContainerSchema -> Out
+    boundary: ContainerSchema -> Boundary
+
+preds
+    locatedAt1: Object * In
+    locatedAt2: Object * Out
+    locatedAt1: Boundary * In
+    locatedAt2: Boundary * Out
+
+%axioms%
+
+    forall c1,c2,c3: ContainerSchema; e: Object; b: Boundary
+
+        .not(inside(c1)=outside(c1))
+
+        .boundary(c1)=b /\ boundary(c2)=b => c1=c2
+        %( if two Boundaries are the same, then their corresponding ContainerSchema is also the same )%
+
+        .exists! c4: ContainerSchema .boundary(c4)=b
+        %( each Boundary corresponds to exactly one ContainerSchema )%
+
+        %( the following axioms specify what happens when something is located 
+        inside a Boundary and this Boundary is located inside, or outside of, another one )%
+
+        .locatedAt1(e,inside(c1)) /\ locatedAt1(boundary(c1),inside(c2)) => locatedAt1(e,inside(c2))
+    
+        .locatedAt2(e,outside(c1)) /\ locatedAt1(boundary(c2),inside(c1)) => locatedAt2(e,outside(c2))
+    
+        .locatedAt1(e,inside(c1)) /\ locatedAt2(boundary(c1),outside(c2)) => locatedAt2(e,outside(c2))
+
+end
+
+
+%( this specification extends the above and defines a particular instance of the CONTAINER schema
+that will be integrated with the specific diagrams in question )%
+
+spec A_CONTAINMENT = CONTAINMENT then 
+
+ops 
+    a_bnd, b_bnd, c_bnd: Boundary
+    a_cs, b_cs, c_cs: ContainerSchema
+    a_in, b_in, c_in: In
+    a_out, b_out, c_out: Out
+
+%axioms%
+    .inside(a_cs)=a_in .outside(a_cs)=a_out .boundary(a_cs)=a_bnd
+    .inside(b_cs)=b_in .outside(b_cs)=b_out .boundary(b_cs)=b_bnd
+    .inside(c_cs)=c_in .outside(c_cs)=c_out .boundary(c_cs)=c_bnd
+
+    .locatedAt1(a_bnd,inside(b_cs))
+    .locatedAt2(b_bnd,outside(c_cs))
+    .locatedAt2(c_bnd,outside(b_cs))
+
+end
+
+
+
+%( here we define some specifications called 'generic spaces' as auxiliary 
+in order to implement the desired correspondences among the input spaces
+(geometry, semantics and CONTAINER schema)
+
+They result in an identification of the following in the blend:
+CONTAINER  / EULER DIAG or LINEAR DIAG  / SEMANTICS
+----------------------------------------------------------
+In         / RegInt     or LineInt      /   Set
+Boundary   / RegBnd     or LineBnd      /
+locatedAt1 / subset     or front        /          )%
+
+
+
+%(GENERIC SPACES)%
+
+
+spec GENERIC_1 =
+
+sorts Int
+
+ops
+    ai,bi,ci: Int
+
+
+
+view a : GENERIC_1 to A_CONTAINMENT =
+Int |-> In,
+ai |-> a_in, bi |-> b_in, ci |-> c_in
+
+
+view b : GENERIC_1 to LINEAR_DIAGRAM =
+Int |-> LineInt,
+ai |-> Ai, bi |-> Bi, ci |-> Ci
+
+
+view c : GENERIC_1 to EULER_DIAGRAM =
+Int |-> RegInt,
+ai |-> Ai, bi |-> Bi, ci |-> Ci
+
+
+view d : GENERIC_1 to A_SEM =
+Int |-> Set,
+ai |-> a, bi |-> b, ci |-> c
+
+
+
+
+spec GENERIC_2 =
+
+sorts Int_merged, Bnd_merged
+
+ops
+    ai,bi,ci: Int_merged
+    ab,bb,cb: Bnd_merged
+
+preds
+    included: Bnd_merged * Int_merged
+
+
+view e : GENERIC_2 to A_CONTAINMENT =
+Int_merged |-> In, Bnd_merged |-> Boundary, 
+ai |-> a_in, bi |-> b_in, ci |-> c_in,
+ab |-> a_bnd, bb |-> b_bnd, cb |-> c_bnd,
+included |-> locatedAt1
+
+
+view f : GENERIC_2 to LINEAR_DIAGRAM =
+Int_merged |-> LineInt, Bnd_merged |-> LineBound, 
+ai |-> Ai, bi |-> Bi, ci |-> Ci,
+ab |-> Ab, bb |-> Bb, cb |-> Cb,
+included |-> front
+
+
+view g : GENERIC_2 to EULER_DIAGRAM =
+Int_merged |-> RegInt, Bnd_merged |-> RegBound, 
+ai |-> Ai, bi |-> Bi, ci |-> Ci,
+ab |-> Ab, bb |-> Bb, cb |-> Cb,
+included |-> subset
+
+
+%( these two commands compute the blends of the Linear diagram 
+and the Euler diagram respectively )%
+
+spec LINEAR_BLEND = combine a, b, d, e, f
+
+
+spec EULER_BLEND = combine a, c, d, e, g
+
+%( both blends have been checked and are consistent )%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+spec LINEAR_BLEND = 
+
+sorts 
+
+    ContainerSchema, Line, Object, Point, Reg, RegBound, RegExt, 
+    RegInt, Region, Bnd_merged < Object; Int_merged, Out < Region
+
+ops
+
+%( unary operations instantiating constants )%
+
+    a_cs, b_cs, c_cs : ContainerSchema
+    a_out, b_out, c_out : Out
+    ab, bb, cb : Bnd_merged
+    ai, bi, ci : Int_merged
+
+%( binary operations/functions.
+Those with same name but with different sorts as arguments
+get automatically renamed to: gn_(old_name)(number) )%
+
+    boundary : ContainerSchema -> Bnd_merged
+    boundaryOf : Line -> Bnd_merged
+    gn_boundaryOf14 : Reg -> RegBound
+    gn_interiorOf21 : Reg -> RegInt
+    inside : ContainerSchema -> Int_merged
+    interiorOf : Line -> Int_merged
+    outside : ContainerSchema -> Out
+
+preds
+
+%( Binary predicates over various sorts.
+Those with same name but with different sorts as arguments
+get automatically renamed to: gn_(old_name)(number) )%
+
+    back, disjoint, front, left, right : Bnd_merged * Bnd_merged
+
+    disj, gn_back5, gn_disjoint9, gn_front16, gn_left25, 
+    gn_right31, incl : Int_merged * Int_merged
+
+    gn_back4, gn_disjoint8, gn_left24, gn_right30, locatedAt1 : Bnd_merged * Int_merged
+
+    gn_disjoint10, gn_left26, gn_right32, intrsct, subset : RegBound * RegBound
+
+    gn_disjoint11, gn_intrsct19, gn_subset36 : RegBound * RegExt
+
+    gn_disjoint13, gn_intrsct21, gn_subset38 : RegInt * RegExt
+
+    gn_disjoint12, gn_intrsct20, gn_left27, gn_right33, 
+    gn_subset37 : RegBound * RegInt
+
+    gn_disjoint14, gn_intrsct22, gn_left28, gn_right34, 
+    gn_subset39 : RegInt * RegInt
+
+    locatedAt1 : Object * Int_merged
+    
+    locatedAt2 : Bnd_merged * Out
+    
+    locatedAt2 : Object * Out
+
+%( axioms )%
+
+%( axioms from the semantics )%
+
+    . incl(ai, bi) . disj(bi, ci)
+    forall p : Int_merged . not incl(p, p)
+    forall p, s : Int_merged . incl(p, s) => not incl(s, p)
+    forall p, s, q : Int_merged . incl(p, s) /\ incl(s, q) => incl(p, q)
+    forall p : Int_merged . not disj(p, p)
+    forall p, s : Int_merged . disj(p, s) => disj(s, p)
+
+%( axioms from CONTAINER )%
+
+    . inside(a_cs) = ai . outside(a_cs) = a_out . boundary(a_cs) = ab
+    . inside(b_cs) = bi . outside(b_cs) = b_out . boundary(b_cs) = bb
+    . inside(c_cs) = ci . outside(c_cs) = c_out . boundary(c_cs) = cb
+    . locatedAt1(ab, inside(b_cs)) . locatedAt2(bb, outside(c_cs)) . locatedAt2(cb, outside(b_cs))
+    forall c1 : ContainerSchema . not inside(c1) = outside(c1)
+    forall c1, c2 : ContainerSchema; b : Bnd_merged
+    . boundary(c1) = b /\ boundary(c2) = b => c1 = c2
+    forall b : Bnd_merged . exists! c4 : ContainerSchema . boundary(c4) = b
+    forall c1, c2 : ContainerSchema; e : Object . locatedAt1(e, inside(c1)) 
+        /\ locatedAt1(boundary(c1), inside(c2)) => locatedAt1(e, inside(c2))
+    forall c1, c2 : ContainerSchema; e : Object . locatedAt2(e, outside(c1))
+        /\ locatedAt1(boundary(c2), inside(c1)) => locatedAt2(e, outside(c2))
+    forall c1, c2 : ContainerSchema; e : Object . locatedAt1(e, inside(c1)) 
+        /\ locatedAt2(boundary(c1), outside(c2)) => locatedAt2(e, outside(c2))
+    . locatedAt1(ab, bi)
+
+%( axioms from LINEAR_GEOM )%
+
+    . gn_front16(ai, bi)
+    . right(cb, bb)
+    . gn_right31(ci, bi)
+    . gn_right30(cb, bi)
+    . not locatedAt1(cb, bi)
+    . not locatedAt1(bb, ci)
+    . not gn_front16(bi, ci)
+    . disjoint(cb, bb)
+    . gn_disjoint9(ci, bi)
+    . gn_disjoint8(cb, bi)
+    . disjoint(ab, bb)
+    . gn_disjoint9(ai, bi)
+    . gn_disjoint8(ab, bi)
+
+%( proofs:
+    . locatedAt2(ab, c_out) proven
+    . locatedAt1(ab, ci) not proven )%
+
+
+
+spec EULER_BLEND = 
+
+sorts 
+    ContainerSchema, Line, LineBound,
+    LineInt, Point, Reg, RegExt;
+    Bnd_merged < Object; Int_merged, Out < Region
+
+ops
+
+%( unary operations instantiating constants )%
+
+    Ax, Bx, Cx : RegExt
+    a_cs, b_cs, c_cs : ContainerSchema
+    a_out, b_out, c_out : Out
+    ab, bb, cb : Bnd_merged
+    ai, bi, ci : Int_merged
+
+%( binary operations/functions.
+Those with same name but with different sorts as arguments
+get automatically renamed to: gn_(old_name)(number) )%
+
+    boundary : ContainerSchema -> Bnd_merged
+    boundaryOf : Line -> LineBound
+    gn_boundaryOf14 : Reg -> Bnd_merged
+    gn_interiorOf21 : Reg -> Int_merged
+    inside : ContainerSchema -> Int_merged
+    interiorOf : Line -> LineInt
+    outside : ContainerSchema -> Out
+
+preds
+
+%( Binary predicates over various sorts.
+Those with same name but with different sorts as arguments
+get automatically renamed to: gn_(old_name)(number) )%
+
+    back, disjoint, front, left, right : LineBound * LineBound
+
+    disj, gn_disjoint14, gn_intrsct23, gn_left29,
+    gn_right35, gn_subset39, incl : Int_merged * Int_merged
+
+    gn_back4, gn_disjoint8, gn_front16, gn_left25, gn_right31 : LineBound * LineInt
+
+    gn_back5, gn_disjoint9, gn_front17, gn_left26, gn_right32 : LineInt * LineInt
+
+    gn_disjoint10, gn_left27, gn_right33,
+    intrsct, subset : Bnd_merged * Bnd_merged
+
+    gn_disjoint11, gn_intrsct20, gn_subset37 : Bnd_merged * RegExt
+
+    gn_disjoint12, gn_intrsct21, gn_left28,
+    gn_left29, gn_right34, locatedAt1 : Bnd_merged * Int_merged
+
+    gn_disjoint13, gn_intrsct22, gn_subset38 : Int_merged * RegExt
+
+    locatedAt1 : Object * Int_merged
+
+    locatedAt2 : Bnd_merged * Out
+
+    locatedAt2 : Object * Out
+
+%axioms%
+
+%( axioms from the semantics )%
+
+    . incl(ai, bi) . disj(bi, ci)
+    forall p : Int_merged . not incl(p, p)
+    forall p, s : Int_merged . incl(p, s) => not incl(s, p)
+    forall p, s, q : Int_merged . incl(p, s) /\ incl(s, q) => incl(p, q)
+    forall p : Int_merged . not disj(p, p)
+    forall p, s : Int_merged . disj(p, s) => disj(s, p)
+
+%( axioms from the CONTAINER schema )%
+
+    . inside(a_cs) = ai . outside(a_cs) = a_out . boundary(a_cs) = ab
+    . inside(b_cs) = bi . outside(b_cs) = b_out . boundary(b_cs) = bb
+    . inside(c_cs) = ci . outside(c_cs) = c_out . boundary(c_cs) = cb
+    . locatedAt1(ab, inside(b_cs)) . locatedAt2(bb, outside(c_cs))
+    . locatedAt2(cb, outside(b_cs))
+    forall c1 : ContainerSchema . not inside(c1) = outside(c1)
+    forall c1, c2 : ContainerSchema; b : Bnd_merged
+        . boundary(c1) = b /\ boundary(c2) = b => c1 = c2
+    forall b : Bnd_merged . exists! c4 : ContainerSchema . boundary(c4) = b
+    forall c1, c2 : ContainerSchema; e : Object . locatedAt1(e, inside(c1)) 
+        /\ locatedAt1(boundary(c1), inside(c2)) => locatedAt1(e, inside(c2))  
+    forall c1, c2 : ContainerSchema; e : Object . locatedAt2(e, outside(c1)) 
+        /\ locatedAt1(boundary(c2), inside(c1)) => locatedAt2(e, outside(c2)) 
+    forall c1, c2 : ContainerSchema; e : Object . locatedAt1(e, inside(c1)) 
+        /\ locatedAt2(boundary(c1), outside(c2)) => locatedAt2(e, outside(c2)) 
+
+%( axioms from EULER_GEOM )%
+
+    . gn_right33(cb, bb)    . gn_right35(ci, bi)    . gn_right34(cb, bi)
+    . gn_disjoint10(cb, bb) . gn_disjoint14(ci, bi) . gn_disjoint12(cb, bi)
+    . locatedAt1(ab, bi)    . gn_subset39(ai, bi)   . gn_disjoint10(ab, bb)
+    . gn_subset37(bb, Cx)   . gn_subset38(bi, Cx)
+
+
+%(  proofs:
+    . locatedAt2(ab, c_out) proven
+    . locatedAt1(ab, ci) not proven )%
+
+

@@ -1,0 +1,981 @@
+
+%( check that blends have the expected stuff)% 
+
+%( 
+The following CASL code 
+specifies the spans needed to compute the value of governing principles
+for a given amalgam between the input spaces I and J,
+refering to the Hasse geometric configuration, and the SPG schema respectively.
+The SPG schema (J) is not generalized, but the Hasse geometry (I) is.
+
+Accordingly, we specify a span V: I <- G -> J,
+a generalization of that span, V0: I_0 <- G_0 -> J
+and then the ideal spans, whose pushouts are the blends
+that maximize each of the 4 governing principles we
+address in our paper, are the following: 
+Ve: I_e <-  G  -> J_e (max Integration)
+Vm:  I  <- G_m ->  J (max Topology)
+Vc:  I  <- G_c ->  J (max Compression)
+Vu:  I  <-  0  ->  J (max Unpacking)
+
+Correspondingly, the pushout of these spans is named the same way
+BLEND_V, BLEND_V0, BLEND_Ve, BLEND_Vc, BLEND_Vm, BLEND_Vu
+
+G_c is the product I x J
+0 is the empty generic space, with the empty morphism to I and J
+I_0 and G_0 are the generalizations of I and G that we use in
+the amalgam. I_e and J_e are generalizations of I and J
+needed to obtain a max Integration blend.
+
+The span V models a blend between I and J, without any generalization,
+which creates outer-space relations between the orientation predicates
+'leftBack', 'rightBack', and 'back' and the schematic predicate 'contiguous',
+between the Point sort of the geometry and the Location sort of the SPG,
+and between the constants denoting 4 points,
+and the constants l_1 to l_4 denoting 4 locations on the path.
+
+The generalized span has I_0 which generalizes from the geometry 
+those points (constants of type Point) that 
+that have no outer-space relation with locations of the SPG schema,
+and those Lines that do not connect these points. 
+So basically it only keeps constants representing 4 points and 3 lines. 
+It also removes predicates leftPP, rightPP
+because they have no significance for the meaning of the Hasse diagram,
+as well as all predicates defined on type Line, except intersectLP, info on
+which points they intersect with
+(all axioms containing the above are also removed).
+Also, G_0 does not have morphisms to any predicates because their properties differ, possibly yielding undesired inferences
+(back is transitive, leftback etc are not transitive, and contiguous is intransitive and symmetric)
+
+Note:
+
+The Maximal compression blend has to be computed in two steps
+because in the first step we compress all sorts with each other
+and only then can we also compress all predicates with each other.
+
+So first we have
+
+I <- GENERIC_1 -> J
+we compute pushout BLEND_Vc1
+and then we have 
+BLEND_Vc1 <- GENERIC_2 -> BLEND_Vc1
+and we compute a pushout again, BLEND_Vc
+
+Contents:
+
+l. 63 J
+l. 129 I_0
+l. 164 I
+l. 264 G_0, views etc
+l. 284 compute blend with 'combine' command
+l. 288 G, views
+l. 316 compute blend with 'combine' command
+l. 324 compute Integration, input spaces and generic
+l. 438 compute Compression (in steps), generic spaces, blend
+l. 755 compute Topology, generic space
+l. 789 compute Unpacking (only resulting blend)
+
+)%
+
+
+
+
+spec J =
+
+sorts 
+	SPGschema, Path, Location, Trajector
+     
+ops
+	source, goal: SPGschema -> Location
+    path: SPGschema -> Path
+    trajector: SPGschema -> Trajector
+
+    l_1, l_2, l_3, l_4: Location
+	p_1: Path
+	s_1: SPGschema
+
+preds 
+	placed : Trajector * Location
+    inPath : Location * Path 
+    isFollowedBy: Location * Location * Path 
+    __contiguous__: Location * Location
+
+%axioms%
+    forall p : Path
+    	%( paths are always part of a unique path schema )%
+    	. exists! s:SPGschema . path(s) = p
+
+    forall s: SPGschema
+    	%( source and goal locations are in the path, and they are distinct )%
+    	. inPath(source(s),path(s))
+    	. inPath(goal(s),path(s))
+    	. not source(s) = goal(s) 
+    	%( trajectors are on a unique location in the path )%
+    	. exists! l:Location . inPath(l,path(s)) /\ placed(trajector(s),l) 
+
+
+    forall k,l: Location; p: Path
+    	%( 'contiguous' is the symmetric closure of the following relation )%
+    	. k contiguous l <=> isFollowedBy(k,l,p) \/ isFollowedBy(l,k,p)
+
+	forall s: SPGschema; l: Location
+    	. not (isFollowedBy(l,source(s),path(s)) \/ isFollowedBy(goal(s),l,path(s)))
+    	%( no location is followed by the source or follows the goal )%
+    	. inPath(l,path(s)) /\ (not l = source(s) ) 
+    		=> exists! k: Location . inPath(k,path(s)) /\ isFollowedBy(k,l,path(s))
+    	%( any location on the path, except the source, follows exactly one location on the same path )%
+    	. inPath(l,path(s)) /\ (not l = goal(s) ) 
+    		=> exists! m:Location . inPath(m,path(s)) /\ isFollowedBy(l,m,path(s))
+    	%( any location on the path, except the goal, is followed by exactly one location on the same path )%
+
+	forall k, l: Location; p: Path
+		.isFollowedBy(k,l,p) \/ isFollowedBy(l,k,p) => inPath(k,p) /\ inPath(l,p)
+		%( any two contiguous locations form a path that contains them )%
+
+
+	.isFollowedBy(l_2,l_1,p_1) .isFollowedBy(l_3,l_2,p_1) .isFollowedBy(l_4,l_3,p_1)
+
+	.source(s_1)=l_1 .path(s_1)=p_1 .goal(s_1)=l_4
+
+end
+
+
+
+
+%( Specification of the generalized geometric configuration )%
+
+
+
+spec I_0 =
+	sorts Point
+	%( here the sorts needed are a Point and a Line )%
+
+ops
+	
+	c_1, c_2, c_5, c_8: Point
+	r_21, r_52, r_85: Line
+
+preds
+	%( the "intersect" predicate is defined on pairs of Points, pairs of Lines, or a Point and a Line )%
+	intersectPP: Point * Point
+
+	%( these predicates are defined on pairs of Lines, pairs of Points, 
+	or a Line and a Point, and they express relative position )%
+
+	__backPP__,__frontPP__,__leftBackPP__,__leftFrontPP__,
+	__rightBackPP__,__rightFrontPP__  : Point * Point
+
+	intersectLP: Line * Point
+
+
+%axioms%
+
+	%( describe the precise relative positions of all pairs of instantiated Points )%
+	.c_1 rightBackPP c_2 .c_2 leftFrontPP c_1 
+	.c_1 rightBackPP c_5 .c_5 leftFrontPP c_1
+	.c_5 leftBackPP c_8 .c_8 rightFrontPP c_5 
+
+	.c_1 backPP c_8 .c_8 frontPP c_1
+	.c_2 backPP c_5 .c_5 frontPP c_2
+
+	.intersectLP(r_21,c_2) .intersectLP(r_21,c_1)
+	.intersectLP(r_52,c_5) .intersectLP(r_52,c_2)
+	.intersectLP(r_85,c_8) .intersectLP(r_85,c_5)
+
+
+end
+
+
+
+spec I = 
+
+sorts Point, Line
+
+ops
+	c_1, c_2, c_5, c_8: Point
+	%( instantiate eight points )%
+	r_21, r_52, r_85: Line
+	%( instantiate twelve Lines )%
+	c_3, c_4, c_6, c_7: Point
+	%( instantiate eight points )%
+
+	r_31, r_41, r_53, r_62, r_64, 
+	r_73, r_74, r_86, r_87: Line
+	%( instantiate twelve Lines )%
+
+preds
+	%( the "intersect" predicate is defined on pairs of Points, pairs of Lines, or a Point and a Line )%
+	intersectLL: Line * Line
+
+	%( these predicates are defined on pairs of Lines, pairs of Points, 
+	or a Line and a Point, and they express relative position )%
+
+	__backLL__,__frontLL__,__leftLL__,__leftBackLL__,__leftFrontLL__,
+	__rightLL__,__rightBackLL__,__rightFrontLL__  : Line * Line
+
+	intersectLP: Line * Point
+	intersectPP: Point * Point
+
+	%( these predicates are defined on pairs of Lines, pairs of Points, 
+	or a Line and a Point, and they express relative position )%
+
+	__backPP__,__frontPP__,__leftPP__,__leftBackPP__,__leftFrontPP__,
+	__rightPP__,__rightBackPP__,__rightFrontPP__,__rightPP__,__leftPP__  : Point * Point
+
+	__backLP__,__frontLP__,__leftLP__,__leftBackLP__,__leftFrontLP__,
+	__rightLP__,__rightBackLP__,__rightFrontLP__,__rightLP__,__leftLP__ : Line * Point
+
+
+%axioms%
+
+
+	%( describe the precise relative positions of all pairs of instantiated Points )%
+	.c_1 rightBackPP c_2 .c_2 leftFrontPP c_1 
+	.c_1 rightBackPP c_5 .c_5 leftFrontPP c_1
+	.c_5 leftBackPP c_8 .c_8 rightFrontPP c_5 
+
+	.c_1 backPP c_8 .c_8 frontPP c_1
+	.c_2 backPP c_5 .c_5 frontPP c_2
+
+	%( describe the precise topological relation - here, intersection - 
+	of Lines with Points and lines with lines )%
+	.intersectLP(r_21,c_1) .intersectLP(r_21,c_2) 
+	.intersectLP(r_52,c_2) .intersectLP(r_52,c_5) 
+	.intersectLP(r_85,c_5) .intersectLP(r_85,c_8) 
+
+	%( describe the precise relative positions of all pairs of instantiated Points )%
+	.c_3 rightBackPP c_5 .c_5 leftFrontPP c_3 
+	.c_4 rightBackPP c_5 .c_5 leftFrontPP c_4 
+	.c_4 rightBackPP c_6 .c_6 leftFrontPP c_4 
+	.c_4 rightBackPP c_8 .c_8 leftFrontPP c_4 
+	.c_7 rightBackPP c_8 .c_8 leftFrontPP c_7 
+
+	.c_1 leftBackPP c_4 .c_4 rightFrontPP c_1 
+	.c_1 leftBackPP c_7 .c_7 rightFrontPP c_1 
+	.c_2 leftBackPP c_6 .c_6 rightFrontPP c_2 
+	.c_2 leftBackPP c_7 .c_7 rightFrontPP c_2 
+	.c_2 leftBackPP c_8 .c_8 rightFrontPP c_2 
+	.c_3 leftBackPP c_7 .c_7 rightFrontPP c_3 
+
+	.c_1 backPP c_3 .c_3 frontPP c_1 
+	.c_1 backPP c_6 .c_6 frontPP c_1 .c_2 leftPP c_3 .c_3 rightPP c_2 
+	.c_2 leftPP c_4 .c_4 rightPP c_2 
+	.c_3 leftPP c_4 .c_4 rightPP c_3 
+	.c_3 backPP c_6 .c_6 frontPP c_3 .c_5 leftPP c_6 .c_6 rightPP c_5 
+	.c_3 backPP c_8 .c_8 frontPP c_3 .c_5 leftPP c_7 .c_7 rightPP c_5 
+	.c_4 backPP c_7 .c_7 frontPP c_4 .c_6 leftPP c_7 .c_7 rightPP c_6 
+	.c_6 backPP c_8 .c_8 frontPP c_6 
+
+	%( describe the precise topological relation - here, intersection - 
+	of Lines with Points and lines with lines )%
+	.intersectLP(r_31,c_1) .intersectLP(r_31,c_3)
+	.intersectLP(r_41,c_1) .intersectLP(r_41,c_4)
+	.intersectLP(r_53,c_3) .intersectLP(r_53,c_5)
+	.intersectLP(r_62,c_2) .intersectLP(r_62,c_6) 
+	.intersectLP(r_64,c_4) .intersectLP(r_64,c_6)
+	.intersectLP(r_73,c_3) .intersectLP(r_73,c_7)
+	.intersectLP(r_74,c_4) .intersectLP(r_74,c_7) 
+	.intersectLP(r_86,c_6) .intersectLP(r_86,c_8)
+	.intersectLP(r_87,c_7) .intersectLP(r_87,c_8) 
+
+	.intersectLL(r_53,r_62) .intersectLL(r_64,r_73)
+
+end
+
+
+
+%(GENERIC SPACES)%
+
+
+spec G_0 =
+
+sort Node
+	
+ops
+	id_1, id_2, id_3, id_4: Node
+
+
+view G0I : G_0 to I_0 = 
+	Node |-> Point, 
+	id_1 |-> c_1, id_2 |-> c_2,
+	id_3 |-> c_5, id_4 |-> c_8
+
+
+view G0J : G_0 to J = 
+	Node |-> Location, 
+	id_1 |-> l_1, id_2 |-> l_2,
+	id_3 |-> l_3, id_4 |-> l_4
+
+
+spec BLEND_V0 = combine G0I, G0J
+
+
+
+spec G =
+
+sort Node
+	
+ops
+	id_1, id_2, id_3, id_4: Node
+
+preds 
+	pred1, pred2, pred3: Node * Node
+
+
+
+view GI : G to I = 
+	Node |-> Point, 
+	id_1 |-> c_1, id_2 |-> c_2,
+	id_3 |-> c_5, id_4 |-> c_8,
+	pred1 |-> __backPP__, pred2 |-> __leftBackPP__,
+	pred3 |-> __rightBackPP__
+
+
+view GJ : G to J = 
+	Node |-> Location, 
+	id_1 |-> l_1, id_2 |-> l_2,
+	id_3 |-> l_3, id_4 |-> l_4,
+	pred1 |-> __contiguous__, pred2 |-> __contiguous__,
+	pred3 |-> __contiguous__
+
+
+spec BLEND_V = combine GI, GJ
+
+
+
+
+
+
+
+%( GENERIC AND INPUT SPACES INTEGRATION )%
+
+
+
+spec J_e =
+
+sorts 
+	Location
+   
+ops  
+    	l_1, l_2, l_3, l_4: Location
+
+preds 
+    __contiguous__: Location * Location
+
+%axioms%
+
+end
+
+
+
+
+%( Specification of the generalized geometric configuration )%
+
+
+
+spec I_e =
+	sorts Point
+	%( here the sorts needed are a Point and a Line )%
+
+ops
+	
+	c_1, c_2, c_5, c_8: Point
+	%( instantiate eight points )%
+
+
+preds
+
+
+	__backPP__,__leftBackPP__,__rightBackPP__ : Point * Point
+
+%axioms%
+
+	.c_1 rightBackPP c_2
+	.c_1 rightBackPP c_5
+	.c_5 leftBackPP c_8
+	.c_1 backPP c_8
+	.c_2 backPP c_5
+	.c_2 leftBackPP c_8 
+
+end
+
+
+
+
+
+
+
+%(GENERIC SPACES)%
+
+
+spec G_e =
+
+sort Node
+	
+ops
+	id_1, id_2, id_3, id_4: Node
+
+preds 
+	pred1, pred2, pred3: Node * Node
+
+
+
+view GeI : G_e to I_e = 
+	Node |-> Point, 
+	id_1 |-> c_1, id_2 |-> c_2,
+	id_3 |-> c_5, id_4 |-> c_8,
+	pred1 |-> __backPP__, pred2 |-> __leftBackPP__,
+	pred3 |-> __rightBackPP__
+
+view GeJ : G_e to J_e = 
+	Node |-> Location, 
+	id_1 |-> l_1, id_2 |-> l_2,
+	id_3 |-> l_3, id_4 |-> l_4,
+	pred1 |-> __contiguous__, pred2 |-> __contiguous__,
+	pred3 |-> __contiguous__
+
+
+spec BLEND_Ve = combine GeI, GeJ
+
+
+
+%(GENERIC SPACES COMPRESSION)%
+
+
+spec GENERIC_1 =
+
+sort SortPL, SortPT, SortPS, SortPP, SortLL, SortLT, SortLS, SortLP
+	
+ops
+	c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, 
+	c13, c14, c15, c16, c17, c18, c19, c20, c21, c22, 
+	c23, c24, c25, c26, c27, c28, c29, c30, c31, c32 : SortPL
+
+	c33, c34, c35, c36, c37, c38, c39, c40: SortPS
+	c41, c42, c43, c44, c45, c46, c47, c48 : SortPP
+	
+	c49, c50, c51, c52, c53, c54, c55, c56, c57, c58, c59, c60,
+	c61, c62, c63, c64, c65, c66, c67, c68, c69, c70, c71, c72, 
+	c73, c74, c75, c76, c77, c78, c79, c80, c81, c82, c83, c84, 
+	c85, c86, c87, c88, c89, c90, c91, c92, c93, c94, c95, c96 : SortLL
+
+	c97, c98, c99, c100, c101, c102, c103, c104, c105, c106, c107, c108 : SortLS
+
+	c109, c110, c111, c112, c113, c114, c115, c116, c117, c118, c119, c120 : SortLP
+
+
+
+view 1b : GENERIC_1 to I = 
+
+SortPL |-> Point, SortPT |-> Point,  SortPS |-> Point,  SortPP |-> Point, 
+SortLL |-> Line,  SortLT |-> Line,  SortLS |-> Line,  SortLP |-> Line, 
+	
+	c1 |-> c_1, c2 |-> c_2, c3 |-> c_3, c4 |-> c_4, 
+	c5 |-> c_5, c6 |-> c_6, c7 |-> c_7, c8 |-> c_8, 
+	c9 |-> c_1, c10 |-> c_2, c11 |-> c_3, c12 |-> c_4, 
+	c13 |-> c_5, c14 |-> c_6, c15 |-> c_7, c16 |-> c_8, 
+	c17 |-> c_1, c18 |-> c_2, c19 |-> c_3, c20 |-> c_4, 
+	c21 |-> c_5, c22 |-> c_6, c23 |-> c_7, c24 |-> c_8, 
+	c25 |-> c_1, c26 |-> c_2, c27 |-> c_3, c28 |-> c_4, 
+	c29 |-> c_5, c30 |-> c_6, c31 |-> c_7, c32 |-> c_8,
+
+	c33 |-> c_1, c34 |-> c_2, c35 |-> c_3, c36 |-> c_4, c37 |-> c_5, c38 |-> c_6, c39 |-> c_7, c40 |-> c_8, %( sort PS )%
+	c41 |-> c_1, c42 |-> c_2, c43 |-> c_3, c44 |-> c_4, c45 |-> c_5, c46 |-> c_6, c47 |-> c_7, c48 |-> c_8, %( sort PP )%
+	
+	c49 |-> r_21, c50 |-> r_31, c51 |-> r_41, c52 |-> r_52,  c53 |-> r_53,  c54 |-> r_62,
+	c55 |-> r_64,  c56 |-> r_73,  c57 |-> r_74,  c58 |-> r_85,  c59 |-> r_86,  c60 |-> r_87, 
+
+	c61 |-> r_21, c62 |-> r_31, c63 |-> r_41, c64 |-> r_52,  c65 |-> r_53,  c66 |-> r_62,
+	c67 |-> r_64,  c68 |-> r_73,  c69 |-> r_74,  c70 |-> r_85,  c71 |-> r_86,  c72 |-> r_87, 
+
+		c73 |-> r_21, c74 |-> r_31, c75 |-> r_41, c76 |-> r_52,  c77 |-> r_53,  c78 |-> r_62,
+	c79 |-> r_64,  c80 |-> r_73,  c81 |-> r_74,  c82 |-> r_85,  c83 |-> r_86,  c84 |-> r_87, 
+
+		c85 |-> r_21, c86 |-> r_31, c87 |-> r_41, c88 |-> r_52,  c89 |-> r_53,  c90 |-> r_62,
+	c91 |-> r_64,  c92 |-> r_73,  c93 |-> r_74,  c94 |-> r_85,  c95 |-> r_86,  c96 |-> r_87, 
+
+	c97 |-> r_21, c98 |-> r_31, c99 |-> r_41, c100 |-> r_52,  c101 |-> r_53,  c102 |-> r_62,
+	c103 |-> r_64,  c104 |-> r_73,  c105 |-> r_74,  c106 |-> r_85,  c107 |-> r_86,  c108 |-> r_87, 
+
+	c109 |-> r_21, c110 |-> r_31, c111 |-> r_41, c112 |-> r_52,  c113 |-> r_53,  c114 |-> r_62,
+	c115 |-> r_64,  c116 |-> r_73,  c117 |-> r_74,  c118 |-> r_85,  c119 |-> r_86,  c120 |-> r_87
+
+
+view 1c : GENERIC_1 to J = 
+
+SortPL |-> Location, SortPT |-> Trajector, SortPS |-> SPGschema, 
+SortPP |-> Path, SortLL |-> Location, SortLT |-> Trajector, 
+SortLS |-> SPGschema, SortLP |-> Path, 
+	c1 |-> l_1, c2 |-> l_1, c3 |-> l_1, c4 |-> l_1, 
+	c5 |-> l_1, c6 |-> l_1, c7 |-> l_1, c8 |-> l_1, 
+	c9 |-> l_2, c10 |-> l_2, c11 |-> l_2, c12 |-> l_2, 
+	c13 |-> l_2, c14 |-> l_2, c15 |-> l_2, c16 |-> l_2, 
+	c17 |-> l_3, c18 |-> l_3, c19 |-> l_3, c20 |-> l_3, 
+	c21 |-> l_3, c22 |-> l_3, c23 |-> l_3, c24 |-> l_3, 
+	c25 |-> l_4, c26 |-> l_4, c27 |-> l_4, c28 |-> l_4, 
+	c29 |-> l_4, c30 |-> l_4, c31 |-> l_4, c32 |-> l_4,
+
+	c33 |-> s_1, c34 |-> s_1, c35 |-> s_1, c36 |-> s_1, c37 |-> s_1, c38 |-> s_1, c39 |-> s_1, c40 |-> s_1, %( sort PS )%
+	c41 |-> p_1, c42 |-> p_1, c43 |-> p_1, c44 |-> p_1, c45 |-> p_1, c46 |-> p_1, c47 |-> p_1, c48 |-> p_1, %( sort PP )%
+
+	c49 |-> l_1, c50 |-> l_1, c51 |-> l_1, c52 |-> l_1,  c53 |-> l_1,  c54 |-> l_1,
+	c55 |-> l_1,  c56 |-> l_1,  c57 |-> l_1,  c58 |-> l_1,  c59 |-> l_1,  c60 |-> l_1, 
+
+	c61 |-> l_2, c62 |-> l_2, c63 |-> l_2, c64 |-> l_2,  c65 |-> l_2,  c66 |-> l_2,
+	c67 |-> l_2,  c68 |-> l_2,  c69 |-> l_2,  c70 |-> l_2,  c71 |-> l_2,  c72 |-> l_2, 
+
+		c73 |-> l_3, c74 |-> l_3, c75 |-> l_3, c76 |-> l_3,  c77 |-> l_3,  c78 |-> l_3,
+	c79 |-> l_3,  c80 |-> l_3,  c81 |-> l_3,  c82 |-> l_3,  c83 |-> l_3,  c84 |-> l_3, 
+
+		c85 |-> l_4, c86 |-> l_4, c87 |-> l_4, c88 |-> l_4,  c89 |-> l_4,  c90 |-> l_4,
+	c91 |-> l_4,  c92 |-> l_4,  c93 |-> l_4,  c94 |-> l_4,  c95 |-> l_4,  c96 |-> l_4, 
+
+	c97 |-> s_1, c98 |-> s_1, c99 |-> s_1, c100 |-> s_1,  c101 |-> s_1,  c102 |-> s_1,
+	c103 |-> s_1,  c104 |-> s_1,  c105 |-> s_1,  c106 |-> s_1,  c107 |-> s_1,  c108 |-> s_1, 
+
+	c109 |-> p_1, c110 |-> p_1, c111 |-> p_1, c112 |-> p_1,  c113 |-> p_1,  c114 |-> p_1,
+	c115 |-> p_1,  c116 |-> p_1,  c117 |-> p_1,  c118 |-> p_1,  c119 |-> p_1,  c120 |-> p_1
+
+
+%( spec BLEND_Vc1 = combine 1b, 1c )%
+
+
+%( compute colimit and then identify predicates )%
+
+spec BLEND_Vc1 =
+
+sorts SortPT
+op goal : SortPT -> SortPT
+op path : SortPT -> SortPT
+op s_1 : SortPT
+op source : SortPT -> SortPT
+op trajector : SortPT -> SortPT
+pred __backLL__ : SortPT * SortPT
+pred __backLP__ : SortPT * SortPT
+pred __backPP__ : SortPT * SortPT
+pred __contiguous__ : SortPT * SortPT
+pred __frontLL__ : SortPT * SortPT
+pred __frontLP__ : SortPT * SortPT
+pred __frontPP__ : SortPT * SortPT
+pred __leftBackLL__ : SortPT * SortPT
+pred __leftBackLP__ : SortPT * SortPT
+pred __leftBackPP__ : SortPT * SortPT
+pred __leftFrontLL__ : SortPT * SortPT
+pred __leftFrontLP__ : SortPT * SortPT
+pred __leftFrontPP__ : SortPT * SortPT
+pred __leftLL__ : SortPT * SortPT
+pred __leftLP__ : SortPT * SortPT
+pred __leftPP__ : SortPT * SortPT
+pred __rightBackLL__ : SortPT * SortPT
+pred __rightBackLP__ : SortPT * SortPT
+pred __rightBackPP__ : SortPT * SortPT
+pred __rightFrontLL__ : SortPT * SortPT
+pred __rightFrontLP__ : SortPT * SortPT
+pred __rightFrontPP__ : SortPT * SortPT
+pred __rightLL__ : SortPT * SortPT
+pred __rightLP__ : SortPT * SortPT
+pred __rightPP__ : SortPT * SortPT
+pred inPath : SortPT * SortPT
+pred intersectLL : SortPT * SortPT
+pred intersectLP : SortPT * SortPT
+pred intersectPP : SortPT * SortPT
+pred isFollowedBy : SortPT * SortPT * SortPT
+pred placed : SortPT * SortPT
+. s_1 rightBackPP s_1 %(Ax1)%
+. s_1 frontPP s_1 %(Ax10)%
+. intersectLP(s_1, s_1) %(Ax11)%
+. s_1 leftFrontPP s_1 %(Ax18)%
+. s_1 leftBackPP s_1 %(Ax27)%
+. s_1 rightFrontPP s_1 %(Ax28)%
+. s_1 backPP s_1 %(Ax39)%
+. s_1 leftPP s_1 %(Ax43)%
+. s_1 rightPP s_1 %(Ax44)%
+. intersectLL(s_1, s_1) %(Ax81)%
+forall p : SortPT . exists! s : SortPT . path(s) = p %(Ax1_83)%
+forall s : SortPT . inPath(source(s), path(s)) %(Ax2_90)%
+forall s : SortPT . inPath(goal(s), path(s)) %(Ax3_91)%
+forall s : SortPT . not source(s) = goal(s)
+                               %(trajectors are on a unique location in the path)%
+forall s : SortPT
+. exists! l : SortPT
+     . inPath(l, path(s)) /\ placed(trajector(s), l)               %(Ax5_92)%
+forall k, l : SortPT; p : SortPT
+. k contiguous l
+     <=> isFollowedBy(k, l, p) \/ isFollowedBy(l, k, p)
+                                                                                                                 %(Ax6_93)%
+forall s : SortPT; l : SortPT
+. not (isFollowedBy(l, source(s), path(s))
+               \/ isFollowedBy(goal(s), l, path(s)))
+           %(no location is followed by the source or follows the goal)%
+forall s : SortPT; l : SortPT
+. inPath(l, path(s)) /\ not l = source(s)
+     => exists! k : SortPT
+                 . inPath(k, path(s)) /\ isFollowedBy(k, l, path(s))
+%(any location on the path, except the source, follows exactly one location on the same path)%
+forall s : SortPT; l : SortPT
+. inPath(l, path(s)) /\ not l = goal(s)
+     => exists! m : SortPT
+                 . inPath(m, path(s)) /\ isFollowedBy(l, m, path(s))
+%(any location on the path, except the goal, is followed by exactly one location on the same path)%
+forall k, l : SortPT; p : SortPT
+. isFollowedBy(k, l, p) \/ isFollowedBy(l, k, p)
+     => inPath(k, p) /\ inPath(l, p)
+       %(any two contiguous locations form a path that contains them)%
+. isFollowedBy(s_1, s_1, s_1) %(Ax11_84)%
+. source(s_1) = s_1 %(Ax14_87)%
+. path(s_1) = s_1 %(Ax15_88)%
+. goal(s_1) = s_1 %(Ax16_89)%
+
+
+
+
+
+spec GENERIC_2 = 
+
+sort Sort
+
+preds
+
+pred1, pred2, pred3, pred4, pred5, pred6, pred7, pred8, pred9, pred10,
+pred11, pred12, pred13, pred14, pred15, pred16, pred17, pred18, pred19, pred20,
+pred21, pred22, pred23, pred24, pred25, pred26, pred27, pred28, pred29, pred30,
+pred31, pred32, pred33, pred34, pred35, pred36, pred37, pred38, pred39, pred40,
+pred41, pred42, pred43, pred44, pred45, pred46, pred47, pred48, pred49, pred50,
+pred51, pred52, pred53, pred54, pred55, pred56, pred57, pred58, pred59, pred60,
+pred61, pred62, pred63, pred64, pred65, pred66, pred67, pred68, pred69, pred70,
+pred71, pred72, pred73, pred74, pred75, pred76, pred77, pred78, pred79, pred80,
+pred81 : Sort * Sort
+
+
+view 2b : GENERIC_2 to BLEND_Vc1 = 
+Sort |-> SortPT,
+pred1 |-> __backLL__, pred2 |-> __backLP__,
+pred3 |-> __backPP__, pred4 |-> __frontLL__,
+pred5 |-> __frontLP__, pred6 |-> __frontPP__,
+pred7 |-> __leftBackLL__, pred8 |-> __leftBackLP__,
+pred9 |-> __leftBackPP__, pred10 |-> __leftFrontLL__,
+pred11 |-> __leftFrontLP__, pred12 |-> __leftFrontPP__,
+pred13 |-> __leftLL__, pred14 |-> __leftLP__, 
+pred15 |-> __leftPP__, pred16 |-> __rightBackLL__,
+pred17 |-> __rightBackLP__, pred18 |-> __rightBackPP__,
+pred19 |-> __rightFrontLL__, pred20 |-> __rightFrontLP__,
+pred21 |-> __rightFrontPP__, pred22 |-> __rightLL__,
+pred23 |-> __rightLP__, pred24 |-> __rightPP__,
+pred25 |-> intersectLL, pred26 |-> intersectLP, pred27 |-> intersectPP,
+pred28 |-> __backLL__, pred29 |-> __backLP__,
+pred30 |-> __backPP__, pred31 |-> __frontLL__,
+pred32 |-> __frontLP__, pred33 |-> __frontPP__,
+pred34 |-> __leftBackLL__, pred35 |-> __leftBackLP__,
+pred36 |-> __leftBackPP__, pred37 |-> __leftFrontLL__,
+pred38 |-> __leftFrontLP__, pred39 |-> __leftFrontPP__,
+pred40 |-> __leftLL__, pred41 |-> __leftLP__, 
+pred42 |-> __leftPP__, pred43 |-> __rightBackLL__,
+pred44 |-> __rightBackLP__, pred45 |-> __rightBackPP__,
+pred46 |-> __rightFrontLL__, pred47 |-> __rightFrontLP__,
+pred48 |-> __rightFrontPP__, pred49 |-> __rightLL__,
+pred50 |-> __rightLP__, pred51 |-> __rightPP__,
+pred52 |-> intersectLL, pred53 |-> intersectLP, pred54 |-> intersectPP,
+pred55 |-> __backLL__, pred56 |-> __backLP__,
+pred57 |-> __backPP__, pred58 |-> __frontLL__,
+pred59 |-> __frontLP__, pred60 |-> __frontPP__,
+pred61 |-> __leftBackLL__, pred62 |-> __leftBackLP__,
+pred63 |-> __leftBackPP__, pred64 |-> __leftFrontLL__,
+pred65 |-> __leftFrontLP__, pred66 |-> __leftFrontPP__,
+pred67 |-> __leftLL__, pred68 |-> __leftLP__, 
+pred69 |-> __leftPP__, pred70 |-> __rightBackLL__,
+pred71 |-> __rightBackLP__, pred72 |-> __rightBackPP__,
+pred73 |-> __rightFrontLL__, pred74 |-> __rightFrontLP__,
+pred75 |-> __rightFrontPP__, pred76 |-> __rightLL__,
+pred77 |-> __rightLP__, pred78 |-> __rightPP__,
+pred79 |-> intersectLL, pred80 |-> intersectLP, pred81 |-> intersectPP
+
+view 2c : GENERIC_2 to BLEND_Vc1 = 
+Sort |-> SortPT,
+pred1 |-> __contiguous__, pred2 |-> __contiguous__,
+pred3 |-> __contiguous__, pred4 |-> __contiguous__,
+pred5 |-> __contiguous__, pred6 |-> __contiguous__,
+pred7 |-> __contiguous__, pred8 |-> __contiguous__,
+pred9 |-> __contiguous__, pred10 |-> __contiguous__,
+pred11 |-> __contiguous__, pred12 |-> __contiguous__,
+pred13 |-> __contiguous__, pred14 |-> __contiguous__, 
+pred15 |-> __contiguous__, pred16 |-> __contiguous__,
+pred17 |-> __contiguous__, pred18 |-> __contiguous__,
+pred19 |-> __contiguous__, pred20 |-> __contiguous__,
+pred21 |-> __contiguous__, pred22 |-> __contiguous__,
+pred23 |-> __contiguous__, pred24 |-> __contiguous__,
+pred25 |-> __contiguous__, pred26 |-> __contiguous__, pred27 |-> __contiguous__,
+pred28 |-> inPath, pred29 |-> inPath,
+pred30 |-> inPath, pred31 |-> inPath,
+pred32 |-> inPath, pred33 |-> inPath,
+pred34 |-> inPath, pred35 |-> inPath,
+pred36 |-> inPath, pred37 |-> inPath,
+pred38 |-> inPath, pred39 |-> inPath,
+pred40 |-> inPath, pred41 |-> inPath, 
+pred42 |-> inPath, pred43 |-> inPath,
+pred44 |-> inPath, pred45 |-> inPath,
+pred46 |-> inPath, pred47 |-> inPath,
+pred48 |-> inPath, pred49 |-> inPath,
+pred50 |-> inPath, pred51 |-> inPath,
+pred52 |-> inPath, pred53 |-> inPath, pred54 |-> inPath,
+pred55 |-> placed, pred56 |-> placed,
+pred57 |-> placed, pred58 |-> placed,
+pred59 |-> placed, pred60 |-> placed,
+pred61 |-> placed, pred62 |-> placed,
+pred63 |-> placed, pred64 |-> placed,
+pred65 |-> placed, pred66 |-> placed,
+pred67 |-> placed, pred68 |-> placed, 
+pred69 |-> placed, pred70 |-> placed,
+pred71 |-> placed, pred72 |-> placed,
+pred73 |-> placed, pred74 |-> placed,
+pred75 |-> placed, pred76 |-> placed,
+pred77 |-> placed, pred78 |-> placed,
+pred79 |-> placed, pred80 |-> placed, pred81 |-> placed
+
+
+
+%( NOT SURE IF THIS IS POSSIBLE, THEY ARE NOT OUTER SPACE RELATIONS )%
+
+%( spec GENERIC_3 = 
+
+sort Sort
+
+ops op1, op2, op3, op4, op5, op6, op7: Sort -> Sort
+
+
+view 3b : GENERIC_3 to BLEND_Vc1 =
+op1 |-> goal, op2 |-> goal, op3 |-> goal, 
+op4 |-> path, op5 |-> path, op6 |-> source
+
+view 3c : GENERIC_3 to BLEND_Vc1 =
+op1 |-> path, op2 |-> source, op3 |-> trajector, 
+op4 |-> source, op5 |-> trajector, op6 |-> trajector )%
+
+
+
+spec BLEND_Vc = combine 2b, 2c
+
+
+
+%( GENERIC SPACE TOPOLOGY )%
+
+
+
+spec G_m =
+
+sort Node
+	
+ops
+	id_1, id_2, id_3, id_4: Node
+
+preds 
+	pred1: Node * Node
+
+
+
+view GmI : G_m to I = 
+	Node |-> Point, 
+	id_1 |-> c_1, id_2 |-> c_2,
+	id_3 |-> c_5, id_4 |-> c_8,
+	pred1 |-> __backPP__
+
+
+view GmJ : G_m to J = 
+	Node |-> Location, 
+	id_1 |-> l_1, id_2 |-> l_2,
+	id_3 |-> l_3, id_4 |-> l_4,
+	pred1 |-> __contiguous__
+
+
+spec BLEND_Vm = combine GmI, GmJ
+
+
+
+%( GENERIC SPACE UNPACKING )%
+
+
+%( just compute colimit of I and J, no views )%
+
+
+spec BLEND_Vu = 
+
+sorts Line, Location, Path, Point, SPGschema, Trajector
+op c_1 : Point
+op c_2 : Point
+op c_3 : Point
+op c_4 : Point
+op c_5 : Point
+op c_6 : Point
+op c_7 : Point
+op c_8 : Point
+op goal : SPGschema -> Location
+op l_1 : Location
+op l_2 : Location
+op l_3 : Location
+op l_4 : Location
+op p_1 : Path
+op path : SPGschema -> Path
+op r_21 : Line
+op r_31 : Line
+op r_41 : Line
+op r_52 : Line
+op r_53 : Line
+op r_62 : Line
+op r_64 : Line
+op r_73 : Line
+op r_74 : Line
+op r_85 : Line
+op r_86 : Line
+op r_87 : Line
+op s_1 : SPGschema
+op source : SPGschema -> Location
+op trajector : SPGschema -> Trajector
+pred __backLL__ : Line * Line
+pred __backLP__ : Line * Point
+pred __backPP__ : Point * Point
+pred __contiguous__ : Location * Location
+pred __frontLL__ : Line * Line
+pred __frontLP__ : Line * Point
+pred __frontPP__ : Point * Point
+pred __leftBackLL__ : Line * Line
+pred __leftBackLP__ : Line * Point
+pred __leftBackPP__ : Point * Point
+pred __leftFrontLL__ : Line * Line
+pred __leftFrontLP__ : Line * Point
+pred __leftFrontPP__ : Point * Point
+pred __leftLL__ : Line * Line
+pred __leftLP__ : Line * Point
+pred __leftPP__ : Point * Point
+pred __rightBackLL__ : Line * Line
+pred __rightBackLP__ : Line * Point
+pred __rightBackPP__ : Point * Point
+pred __rightFrontLL__ : Line * Line
+pred __rightFrontLP__ : Line * Point
+pred __rightFrontPP__ : Point * Point
+pred __rightLL__ : Line * Line
+pred __rightLP__ : Line * Point
+pred __rightPP__ : Point * Point
+pred inPath : Location * Path
+pred intersectLL : Line * Line
+pred intersectLP : Line * Point
+pred intersectPP : Point * Point
+pred isFollowedBy : Location * Location * Path
+pred placed : Trajector * Location
+. c_1 rightBackPP c_2 %(Ax1)%
+. c_2 leftFrontPP c_1 %(Ax2)%
+. c_1 rightBackPP c_5 %(Ax3)%
+. c_5 leftFrontPP c_1 %(Ax4)%
+. c_5 leftBackPP c_8 %(Ax5)%
+. c_8 rightFrontPP c_5 %(Ax6)%
+. c_1 backPP c_8 %(Ax7)%
+. c_8 frontPP c_1 %(Ax8)%
+. c_2 backPP c_5 %(Ax9)%
+. c_5 frontPP c_2 %(Ax10)%
+. intersectLP(r_21, c_1) %(Ax11)%
+. intersectLP(r_21, c_2) %(Ax12)%
+. intersectLP(r_52, c_2) %(Ax13)%
+. intersectLP(r_52, c_5) %(Ax14)%
+. intersectLP(r_85, c_5) %(Ax15)%
+. intersectLP(r_85, c_8) %(Ax16)%
+. c_3 rightBackPP c_5 %(Ax17)%
+. c_5 leftFrontPP c_3 %(Ax18)%
+. c_4 rightBackPP c_5 %(Ax19)%
+. c_5 leftFrontPP c_4 %(Ax20)%
+. c_4 rightBackPP c_6 %(Ax21)%
+. c_6 leftFrontPP c_4 %(Ax22)%
+. c_4 rightBackPP c_8 %(Ax23)%
+. c_8 leftFrontPP c_4 %(Ax24)%
+. c_7 rightBackPP c_8 %(Ax25)%
+. c_8 leftFrontPP c_7 %(Ax26)%
+. c_1 leftBackPP c_4 %(Ax27)%
+. c_4 rightFrontPP c_1 %(Ax28)%
+. c_1 leftBackPP c_7 %(Ax29)%
+. c_7 rightFrontPP c_1 %(Ax30)%
+. c_2 leftBackPP c_6 %(Ax31)%
+. c_6 rightFrontPP c_2 %(Ax32)%
+. c_2 leftBackPP c_7 %(Ax33)%
+. c_7 rightFrontPP c_2 %(Ax34)%
+. c_2 leftBackPP c_8 %(Ax35)%
+. c_8 rightFrontPP c_2 %(Ax36)%
+. c_3 leftBackPP c_7 %(Ax37)%
+. c_7 rightFrontPP c_3 %(Ax38)%
+. c_1 backPP c_3 %(Ax39)%
+. c_3 frontPP c_1 %(Ax40)%
+. c_1 backPP c_6 %(Ax41)%
+. c_6 frontPP c_1 %(Ax42)%
+. c_2 leftPP c_3 %(Ax43)%
+. c_3 rightPP c_2 %(Ax44)%
+. c_2 leftPP c_4 %(Ax45)%
+. c_4 rightPP c_2 %(Ax46)%
+. c_3 leftPP c_4 %(Ax47)%
+. c_4 rightPP c_3 %(Ax48)%
+. c_3 backPP c_6 %(Ax49)%
+. c_6 frontPP c_3 %(Ax50)%
+. c_5 leftPP c_6 %(Ax51)%
+. c_6 rightPP c_5 %(Ax52)%
+. c_3 backPP c_8 %(Ax53)%
+. c_8 frontPP c_3 %(Ax54)%
+. c_5 leftPP c_7 %(Ax55)%
+. c_7 rightPP c_5 %(Ax56)%
+. c_4 backPP c_7 %(Ax57)%
+. c_7 frontPP c_4 %(Ax58)%
+. c_6 leftPP c_7 %(Ax59)%
+. c_7 rightPP c_6 %(Ax60)%
+. c_6 backPP c_8 %(Ax61)%
+. c_8 frontPP c_6 %(Ax62)%
+. intersectLP(r_31, c_1) %(Ax63)%
+. intersectLP(r_31, c_3) %(Ax64)%
+. intersectLP(r_41, c_1) %(Ax65)%
+. intersectLP(r_41, c_4) %(Ax66)%
+. intersectLP(r_53, c_3) %(Ax67)%
+. intersectLP(r_53, c_5) %(Ax68)%
+. intersectLP(r_62, c_2) %(Ax69)%
+. intersectLP(r_62, c_6) %(Ax70)%
+. intersectLP(r_64, c_4) %(Ax71)%
+. intersectLP(r_64, c_6) %(Ax72)%
+. intersectLP(r_73, c_3) %(Ax73)%
+. intersectLP(r_73, c_7) %(Ax74)%
+. intersectLP(r_74, c_4) %(Ax75)%
+. intersectLP(r_74, c_7) %(Ax76)%
+. intersectLP(r_86, c_6) %(Ax77)%
+. intersectLP(r_86, c_8) %(Ax78)%
+. intersectLP(r_87, c_7) %(Ax79)%
+. intersectLP(r_87, c_8) %(Ax80)%
+. intersectLL(r_53, r_62) %(Ax81)%
+. intersectLL(r_64, r_73) %(Ax82)%
+forall p : Path . exists! s : SPGschema . path(s) = p %(Ax1_83)%
+forall s : SPGschema . inPath(source(s), path(s)) %(Ax2_90)%
+forall s : SPGschema . inPath(goal(s), path(s)) %(Ax3_91)%
+forall s : SPGschema . not source(s) = goal(s)
+                               %(trajectors are on a unique location in the path)%
+forall s : SPGschema
+. exists! l : Location
+     . inPath(l, path(s)) /\ placed(trajector(s), l)               %(Ax5_92)%
+forall k, l : Location; p : Path
+. k contiguous l
+     <=> isFollowedBy(k, l, p) \/ isFollowedBy(l, k, p)
+                                                                                                                 %(Ax6_93)%
+forall s : SPGschema; l : Location
+. not (isFollowedBy(l, source(s), path(s))
+               \/ isFollowedBy(goal(s), l, path(s)))
+           %(no location is followed by the source or follows the goal)%
+forall s : SPGschema; l : Location
+. inPath(l, path(s)) /\ not l = source(s)
+     => exists! k : Location
+                 . inPath(k, path(s)) /\ isFollowedBy(k, l, path(s))
+%(any location on the path, except the source, follows exactly one location on the same path)%
+forall s : SPGschema; l : Location
+. inPath(l, path(s)) /\ not l = goal(s)
+     => exists! m : Location
+                 . inPath(m, path(s)) /\ isFollowedBy(l, m, path(s))
+%(any location on the path, except the goal, is followed by exactly one location on the same path)%
+forall k, l : Location; p : Path
+. isFollowedBy(k, l, p) \/ isFollowedBy(l, k, p)
+     => inPath(k, p) /\ inPath(l, p)
+       %(any two contiguous locations form a path that contains them)%
+. isFollowedBy(l_2, l_1, p_1) %(Ax11_84)%
+. isFollowedBy(l_3, l_2, p_1) %(Ax12_85)%
+. isFollowedBy(l_4, l_3, p_1) %(Ax13_86)%
+. source(s_1) = l_1 %(Ax14_87)%
+. path(s_1) = p_1 %(Ax15_88)%
+. goal(s_1) = l_4 %(Ax16_89)%
+

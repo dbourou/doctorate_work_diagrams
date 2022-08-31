@@ -1,0 +1,528 @@
+%( the following CASL code up to the colimit (line 342),
+can be copied and executed online in http://rest.hets.eu/ to give rise 
+to various specifications of image schemas and the concept diagram geometry.
+Then by clicking: commands > compute colimit
+one can reproduce the colimit=blend we present here.
+After the blend, we also present some proof obligations,
+i.e., additional formulas that are entailed by the axioms of the blend )%
+
+
+spec CONTAINMENT =
+
+sorts 
+    Boundary < Object; Region, ContainerSchema
+    %( ContainerSchema sort corresponds to the entire configuration defined in the specification = schema gestalt )%
+
+ops 
+    %( operations listed below are functions, so each instance of a sort on the left would be mapped to exactly one instance of the sort on the right )%
+
+    inside: ContainerSchema -> Region
+    outside: ContainerSchema -> Region
+    boundary: ContainerSchema -> Boundary
+
+preds
+
+    locatedAt: Object * Region
+    locatedAt: Boundary * Region
+%axioms%
+
+    forall c1,c2,c3: ContainerSchema; e: Object; l: Region; b: Boundary
+
+        .not(inside(c1)=outside(c1))
+
+        .boundary(c1)=b /\ boundary(c2)=b => c1=c2
+        %( if two Boundaries are the same, then their corresponding ContainerSchema is also the same )%
+
+        .exists! c4: ContainerSchema .boundary(c4)=b
+        %( each Boundary corresponds to exactly one ContainerSchema )%
+
+        %( the following axioms specify what happens when something is located 
+        inside a Boundary and this Boundary is located inside, or outside of, another one )%
+
+        .locatedAt(e,inside(c1)) /\ locatedAt(boundary(c1),inside(c2)) => locatedAt(e,inside(c2))
+    
+        .locatedAt(e,outside(c1)) /\ locatedAt(boundary(c2),inside(c1)) => locatedAt(e,outside(c2))
+    
+        .locatedAt(e,inside(c1)) /\ locatedAt(boundary(c1),outside(c2)) => locatedAt(e,outside(c2))
+
+end
+
+
+spec A_CONTAINMENT = CONTAINMENT then 
+
+ops 
+    ci_ent, r_ent: Object
+    a_bnd, c_bnd, d_bnd, e_bnd: Boundary
+    a_cs, c_cs, d_cs, e_cs: ContainerSchema
+    a_in, c_in, d_in, e_in: Region
+    a_out, c_out, d_out, e_out: Region
+
+%axioms%
+    .inside(a_cs)=a_in .outside(a_cs)=a_out .boundary(a_cs)=a_bnd
+    .inside(c_cs)=c_in .outside(c_cs)=c_out .boundary(c_cs)=c_bnd
+    .inside(d_cs)=d_in .outside(d_cs)=d_out .boundary(d_cs)=d_bnd
+    .inside(e_cs)=e_in .outside(e_cs)=e_out .boundary(e_cs)=e_bnd
+
+    .locatedAt(c_bnd,inside(a_cs))  .locatedAt(e_bnd,inside(d_cs)) 
+    .locatedAt(d_bnd,inside(a_cs))  .locatedAt(d_bnd,outside(c_cs))
+    .locatedAt(c_bnd,outside(d_cs))
+    .locatedAt(r_ent,inside(a_cs))  .locatedAt(ci_ent,inside(c_cs))
+
+end
+
+
+
+
+spec LINKAGE =
+
+sorts 
+    Link, Entity, LinkSchema
+    %( Link is a subsort of Entity. 
+    LinkSchema sort corresponds to the entire configuration )%
+
+ops 
+    %( each LinkSchema is input to some operations and gives as output 
+    a unique Link, a unique "from" Entity and a unique "to" Entity )%
+
+    link: LinkSchema -> Link
+    
+    anEnt: LinkSchema -> Entity
+    
+    anotherEnt: LinkSchema -> Entity
+
+pred 
+    linked: Entity * Entity
+    %( "linked" predicate takes as arguments two Entities )%
+
+%axioms%
+
+    forall s:LinkSchema
+        %( entities of a LinkSchema are linked )%
+        . linked(anEnt(s),anotherEnt(s))
+
+    forall l:Link
+        %( links are always part of a unique link schema )%
+        . exists! s:LinkSchema . link(s) = l
+
+    forall x,y : Entity; s: LinkSchema
+        . linked(x,y) <=> ( anEnt(s) = x /\ anotherEnt(s) = y ) \/ ( anEnt(s) = y /\ anotherEnt(s) = x )
+        %( linked entities are always part of some -not necessarily unique- link schema )%
+
+        .linked(x,y) <=> linked(y,x) %symmetry%
+
+        .not linked(x,x) %irreflexivity%
+
+end
+
+
+
+
+
+%( INSTANTIATION OF LINKAGE )%
+
+spec A_LINKAGE = LINKAGE then
+
+
+ops
+
+    e_ci: Entity
+    e_e: Entity
+    link_cie: Link
+    lsc_cie: LinkSchema
+
+%axioms%
+
+    .anEnt(lsc_cie)=e_ci .anotherEnt(lsc_cie)=e_e 
+    .link(lsc_cie)=link_cie
+
+end
+
+
+spec SOURCE_PATH_GOAL =
+
+sorts 
+	SPGschema, Path, Location, Trajector
+     
+ops
+	source, goal: SPGschema -> Location
+    path: SPGschema -> Path
+    trajector: SPGschema -> Trajector
+
+preds 
+	placed : Trajector * Location
+    inPath : Location * Path 
+    isFollowedBy: Location * Location * Path 
+    __contiguous__: Location * Location
+
+%axioms%
+    forall p : Path
+    	%( paths are always part of a unique path schema )%
+    	. exists! s:SPGschema . path(s) = p
+
+    forall s: SPGschema
+    	%( source and goal locations are in the path, and they are distinct )%
+    	. inPath(source(s),path(s))
+    	. inPath(goal(s),path(s))
+    	. not source(s) = goal(s) 
+    	%( trajectors are on a unique location in the path )%
+    	. exists! l:Location . inPath(l,path(s)) /\ placed(trajector(s),l) 
+
+
+    forall k,l: Location; p: Path
+    	%( 'contiguous' is the symmetric closure of the following relation )%
+    	. k contiguous l <=> isFollowedBy(k,l,p) \/ isFollowedBy(l,k,p)
+
+	forall s: SPGschema; l: Location
+    	. not (isFollowedBy(l,source(s),path(s)) \/ isFollowedBy(goal(s),l,path(s)))
+    	%( no location is followed by the source or follows the goal )%
+    	. inPath(l,path(s)) /\ (not l = source(s) ) 
+    		=> exists! k: Location . inPath(k,path(s)) /\ isFollowedBy(k,l,path(s))
+    	%( any location on the path, except the source, follows exactly one location on the same path )%
+    	. inPath(l,path(s)) /\ (not l = goal(s) ) 
+    		=> exists! m:Location . inPath(m,path(s)) /\ isFollowedBy(l,m,path(s))
+    	%( any location on the path, except the goal, is followed by exactly one location on the same path )%
+
+	forall k, l: Location; p: Path
+		.isFollowedBy(k,l,p) \/ isFollowedBy(l,k,p) => inPath(k,p) /\ inPath(l,p)
+		%( any two contiguous locations form a path that contains them )%
+
+end
+
+
+
+spec A_SOURCE_PATH_GOAL = SOURCE_PATH_GOAL then
+
+ops
+    s_1: SPGschema
+    p_1: Path
+    l_ci, l_e: Location
+    t: Trajector
+
+%axioms%
+
+    .trajector(s_1)= t
+    .placed(t,l_e)
+
+    .source(s_1)=l_ci .goal(s_1)=l_e .path(s_1)=p_1
+    .isFollowedBy(l_ci,l_e,p_1)
+
+end
+
+
+
+spec A_CONCEPT_CONFIG =
+    
+sorts 
+    Cell, Line, Region, LineBoundary, LineInterior
+
+ops
+
+    boundaryOf: Line -> LineBoundary
+    interiorOf: Line -> LineInterior
+    A, C, D, E: Region
+    R: Line
+    Rb: LineBoundary
+    Ri: LineInterior
+    co: Cell
+
+preds 
+    
+    rectangle, circle: Region
+    arrow: Line
+    disjointRR: Region * Region
+    subset_ofRR: Region * Region
+    subset_ofLR: Line * Region
+    subset_ofCR: Cell * Region
+    intersectLbC: LineBoundary * Cell
+    intersectLbR: LineBoundary * Region
+    intersectLiR: LineInterior * Region
+
+    __leftRR__, __rightRR__: Region * Region
+    __leftLR__, __rightLR__: Line * Region
+    __leftRL__, __rightRL__: Region * Line
+    __leftLC__, __rightLC__: Line * Cell
+    __leftCL__, __rightCL__: Cell * Line
+    __leftCR__, __rightCR__: Cell * Region
+    __leftRC__, __rightRC__: Region * Cell
+
+%axioms%
+
+    .rectangle(A) .arrow(R)
+    .circle(C) .circle(D) .circle(E)
+
+    .disjointRR(C,D) .disjointRR(C,E)
+
+    .subset_ofCR(co,C) .intersectLbR(Rb,E)
+    .subset_ofRR(E,D)  .intersectLbR(Rb,E)
+    .subset_ofRR(C,A)  .intersectLiR(Ri,D)
+    .subset_ofRR(D,A)  .intersectLiR(Ri,C)
+    .subset_ofRR(E,A)  .intersectLbC(Rb,co)
+    .subset_ofLR(R,A)
+    .subset_ofCR(co,A)
+
+    .R leftLR D     .D rightRL R
+    .R leftLR E     .E rightRL R
+
+    .C rightRR E    .E leftRR C
+    .D rightRR C    .C leftRR D 
+
+    .D leftRC co    .co rightCR D
+    .E leftRC co    .co rightCR E
+
+    .R leftLR C     .C rightRL R
+    .R leftLC co    .co rightCL R
+
+    .boundaryOf(R)=Rb .interiorOf(R)=Ri
+
+end
+
+
+
+
+%(GENERIC SPACES)%
+
+%( the generic spaces are a tool for us to identify the sorts, 
+and the instantiated constants we want in the blend.
+We do this by defining some new constants of new sorts, 
+and mapping the sorts/constants to the sorts/constants we want to identify )%
+
+
+spec GENERIC_1 =
+
+sort Node1, Node2, Edge
+    
+ops
+    id_5: Node1
+    id_6: Node2
+    edge_7: Edge
+
+
+view 1a : GENERIC_1 to A_LINKAGE = 
+    Node1 |-> Entity,  Node2 |-> Entity,
+    Edge |-> Link, 
+    id_5 |-> e_e, id_6 |-> e_ci,
+    edge_7 |-> link_cie 
+
+
+view 1b : GENERIC_1 to A_CONCEPT_CONFIG = 
+    Node1 |-> Region, Node2 |-> Cell,
+    Edge |-> Line, 
+    id_5 |-> E, id_6 |-> co,
+    edge_7 |-> R 
+
+
+view 1c : GENERIC_1 to A_CONTAINMENT = 
+    Node1 |-> Boundary, Node2 |-> Object,
+    Edge |-> Object, 
+    id_5 |-> e_bnd, id_6 |-> ci_ent,
+    edge_7 |-> r_ent
+
+
+spec GENERIC_2 =
+
+    sorts Blob
+
+    ops n_1, n_3, n_4, n_5: Blob
+
+
+
+view 2a : GENERIC_2 to A_CONTAINMENT =
+
+    Blob |-> Boundary, n_1 |-> a_bnd,
+    n_3 |-> c_bnd, n_4 |-> d_bnd, n_5 |-> e_bnd
+
+
+view 2b : GENERIC_2 to A_CONCEPT_CONFIG =
+
+    Blob |-> Region, n_1 |-> A,
+    n_3 |-> C, n_4 |-> D, n_5 |-> E
+
+
+
+
+spec COLIMIT = 
+
+sorts   Blob, ContainerSchema, LineBoundary, LineInterior,
+        LinkSchema, Location, Path, Region, SPGschema, Trajector
+
+ops
+    Rb : LineBoundary
+    Ri : LineInterior
+    a_cs, c_cs, d_cs, e_cs : ContainerSchema
+    a_in, a_out, c_in, c_out, d_in, d_out, e_in, e_out : Region
+
+    id_6, n_1, n_3, n_4, n_5, id_6 : Blob
+
+    l_ci : Location
+    l_e : Location
+    lsc_cie : LinkSchema
+    p_1 : Path
+    r_ent : Blob
+    s_1 : SPGschema
+    t : Trajector
+
+    anEnt : LinkSchema -> Blob
+    anotherEnt : LinkSchema -> Blob
+    link : LinkSchema -> Blob
+
+    boundaryOf : Blob -> LineBoundary
+    interiorOf : Blob -> LineInterior
+
+    boundary : ContainerSchema -> Blob
+    inside : ContainerSchema -> Region
+    outside : ContainerSchema -> Region
+
+    goal : SPGschema -> Location
+    path : SPGschema -> Path
+    source : SPGschema -> Location
+    trajector : SPGschema -> Trajector
+
+preds
+
+    rectangle, circle: Blob
+    arrow: Blob
+
+    intersectLbC: LineBoundary * Blob
+    intersectLbR: LineBoundary * Blob
+    intersectLiR: LineInterior * Blob
+
+    disjointRR, subset_ofRR, subset_ofLR, subset_ofCR,
+    __leftRR__, __leftLR__, __leftRL__, __leftLC__, __leftCL__, 
+    __leftCR__, __leftRC__, __rightRR__, __rightLR__, __rightRL__, 
+    __rightLC__, __rightCL__,  __rightCR__, __rightRC__: Blob * Blob
+
+    inPath : Location * Path
+    isFollowedBy : Location * Location * Path
+    __contiguous__ : Location * Location
+    linked : Blob * Blob
+    locatedAt : Blob * Region
+    placed : Trajector * Location
+
+
+%axioms%
+
+%(geometry axioms)%
+
+    .rectangle(n_1) .arrow(r_ent)
+    .circle(n_3) .circle(n_4) .circle(n_5)
+
+    .disjointRR(n_3, n_4) .disjointRR(n_3, n_5)
+
+    .subset_ofCR(id_6,n_3) .intersectLbR(Rb,n_5)
+    .subset_ofRR(n_5,n_4)  .intersectLbR(Rb,n_5)
+    .subset_ofRR(n_3,n_1)  .intersectLiR(Ri,n_4)
+    .subset_ofRR(n_4,n_1)  .intersectLiR(Ri,n_3)
+    .subset_ofRR(n_5,n_1)  .intersectLbC(Rb,id_6)
+    .subset_ofLR(r_ent,n_1)
+    .subset_ofCR(id_6,n_1)
+
+    .r_ent leftLR n_4     .n_4 rightRL r_ent
+    .r_ent leftLR n_5     .n_5 rightRL r_ent
+
+    .n_3 rightRR n_5    .n_5 leftRR n_3
+    .n_4 rightRR n_3    .n_3 leftRR n_4
+
+    .n_4 leftRC id_6    .id_6 rightCR n_4
+    .n_5 leftRC id_6    .id_6 rightCR n_5
+
+    .r_ent leftLR n_3     .n_3 rightRL r_ent
+    .r_ent leftLC id_6    .id_6 rightCL r_ent
+
+    .boundaryOf(r_ent)=Rb .interiorOf(r_ent)=Ri
+
+
+%(path axioms)%
+
+    . trajector(s_1) = t 
+    . placed(t, l_e) 
+    . source(s_1) = l_ci 
+    . goal(s_1) = l_e 
+    . path(s_1) = p_1 
+    . isFollowedBy(l_ci, l_e, p_1) 
+
+    forall s : SPGschema . not source(s) = goal(s)
+    
+    forall s : SPGschema . exists! l : Location
+        . inPath(l, path(s)) /\ placed(trajector(s), l)
+
+    forall k, l : Location; p : Path . k contiguous l
+        <=> isFollowedBy(k, l, p) \/ isFollowedBy(l, k, p)     
+
+    forall s : SPGschema; l : Location
+        . not (isFollowedBy(l, source(s), path(s)) \/ isFollowedBy(goal(s), l, path(s)))
+
+    forall s : SPGschema; l : Location
+        . inPath(l, path(s)) /\ not l = source(s) => exists! k : Location
+            . inPath(k, path(s)) /\ isFollowedBy(k, l, path(s))
+
+    forall s : SPGschema; l : Location
+        . inPath(l, path(s)) /\ not l = goal(s) => exists! m : Location
+            . inPath(m, path(s)) /\ isFollowedBy(l, m, path(s))
+
+    forall k, l : Location; p : Path
+        . isFollowedBy(k, l, p) \/ isFollowedBy(l, k, p) => inPath(k, p) /\ inPath(l, p)
+ 
+    forall p : Path . exists! s : SPGschema . path(s) = p 
+
+    forall s : SPGschema . inPath(source(s), path(s))
+
+    forall s : SPGschema . inPath(goal(s), path(s)) 
+
+
+%(link axioms)%
+
+    . anEnt(lsc_cie) = id_6
+    . anotherEnt(lsc_cie) = n_5 
+    . link(lsc_cie) = r_ent 
+
+    forall s : LinkSchema . linked(anEnt(s), anotherEnt(s)) 
+
+    forall l : Blob . exists! s : LinkSchema . link(s) = l
+
+    forall x, y : Blob; s : LinkSchema . linked(x, y)
+        <=> (anEnt(s) = x /\ anotherEnt(s) = y) \/ (anEnt(s) = y /\ anotherEnt(s) = x)
+
+    forall x, y : Blob . linked(x, y) <=> linked(y, x) 
+    
+    forall x : Blob . not linked(x, x) 
+
+
+%(container axioms)%
+
+    . inside(a_cs) = a_in . outside(a_cs) = a_out . boundary(a_cs) = n_1 
+    . inside(c_cs) = c_in . outside(c_cs) = c_out . boundary(c_cs) = n_3 
+    . inside(d_cs) = d_in . outside(d_cs) = d_out . boundary(d_cs) = n_4
+    . inside(e_cs) = e_in . outside(e_cs) = e_out . boundary(e_cs) = n_5 
+
+    . locatedAt(n_3, inside(a_cs))  . locatedAt(n_5, inside(d_cs)) 
+    . locatedAt(n_4, inside(a_cs))  . locatedAt(n_4, outside(c_cs))
+    . locatedAt(n_3, outside(d_cs)) . locatedAt(r_ent, inside(a_cs))
+    . locatedAt(id_6, inside(c_cs))
+
+    forall c1, c2 : ContainerSchema; b : Blob
+        . boundary(c1) = b /\ boundary(c2) = b => c1 = c2
+
+    forall b : Blob . exists! c4 : ContainerSchema . boundary(c4) = b
+
+    forall c1 : ContainerSchema . not inside(c1) = outside(c1)
+
+    forall c1, c2 : ContainerSchema; e : Blob
+        . locatedAt(e, inside(c1)) /\ locatedAt(boundary(c1), inside(c2))
+            => locatedAt(e, inside(c2))           
+
+    forall c1, c2 : ContainerSchema; e : Blob
+        . locatedAt(e, outside(c1)) /\ locatedAt(boundary(c2), inside(c1))
+            => locatedAt(e, outside(c2))    
+
+    forall c1, c2 : ContainerSchema; e : Blob
+        . locatedAt(e, inside(c1)) /\ locatedAt(boundary(c1), outside(c2))
+            => locatedAt(e, outside(c2)) 
+
+%proofs%
+
+    . locatedAt(n_5, inside(a_cs)) %implied
+    . locatedAt(n_5, outside(c_cs)) %implied
+    . locatedAt(id_6, inside(a_cs)) %implied
+    . locatedAt(id_6, outside(d_cs)) %implied
+    . locatedAt(id_6, outside(e_cs)) %implied
+

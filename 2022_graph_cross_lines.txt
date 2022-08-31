@@ -1,0 +1,732 @@
+%( the following CASL code up to the blends (line 409)
+can be copied and executed online in http://rest.hets.eu/ to give rise 
+to various specifications of image schemas, the geometry
+of the crossing and non-crossing graphs, their semantics,
+and the blends of all 3. For ease of reading,
+we also present the computed blends here already, after line 409  )%
+
+
+%( a general specification defining all the possible components
+of a geometrical configuration )%
+
+spec GEOM =
+
+sorts Point, Reg, RegBnd, RegInt, RegExt, Line, LineBnd, LineInt
+
+%( operations listed below are functions, so each instance of a sort on the left would be mapped to exactly one instance of the sort on the right )%
+%( each line has a boundary and an interior,
+each region has a boundary and an interior )%
+
+ops
+    boundaryOf: Line -> LineBnd
+    interiorOf: Line -> LineInt
+    boundaryOf: Reg -> RegBnd
+    interiorOf: Reg -> RegInt
+
+preds
+
+%( line boundaries, line interiors, region boundaries and region interiors
+can all be related with each other by being front,
+front_right, right, back_right, back, back_left,
+left, front_left, of each other, or by intersecting, 
+being disjoint or subsets of each other )%
+
+front, front_right, right, back_right, back, back_left,
+left, front_left, subset, disjoint, intrsct: RegBnd * RegBnd
+
+front, front_right, right, back_right, back, back_left,
+left, front_left, subset, disjoint, intrsct: RegInt * RegInt
+
+front, front_right, right, back_right, back, back_left,
+left, front_left, subset, disjoint, intrsct: LineInt * RegInt
+
+front, front_right, right, back_right, back, back_left,
+left, front_left, subset, disjoint, intrsct: RegBnd * LineBnd
+
+front, front_right, right, back_right, back, back_left,
+left, front_left, subset, disjoint, intrsct: LineBnd * RegBnd
+
+front, front_right, right, back_right, back, back_left,
+left, front_left, subset, disjoint, intrsct: LineBnd * LineBnd
+
+front, front_right, right, back_right, back, back_left,
+left, front_left, subset, disjoint, intrsct: LineInt * LineInt
+
+%axioms%
+
+%( here we describe some simple properties 
+such as symmetry/asymmetry and irreflexivity
+for the above predicates,
+for region boundaries and line boundaries, indicative.
+we could as many axioms as we want here, 
+this would not alter the results )%
+
+forall p1, p2: RegBnd
+.intrsct(p1,p2) <=> intrsct(p2,p1)
+
+.disjoint(p1,p2) <=> disjoint(p2,p1)
+
+.not disjoint(p1,p1)
+
+.subset(p1,p2) => not subset(p2,p1)
+
+.front(p1,p2) <=> back(p2,p1)
+
+.front_right(p1,p2) <=> back_left(p2,p1)
+
+.right(p1,p2) <=> left(p2,p1)
+
+.back_right(p1,p2) <=> front_left(p2,p1)
+
+
+forall l1, l2: LineBnd
+.intrsct(l1,l2) <=> intrsct(l2,l1)
+
+.disjoint(l1,l2) <=> disjoint(l2,l1)
+
+.not disjoint(l1,l1)
+
+.front(l1,l2) <=> back(l2,l1)
+
+.front_right(l1,l2) <=> back_left(l2,l1)
+
+.right(l1,l2) <=> left(l2,l1)
+
+.back_right(l1,l2) <=> front_left(l2,l1)
+
+
+%( a specification defining the constants representing
+the elements of the concrete graph with crossing lines
+we are working with. this specification extends the 
+general GEOM specification )%
+
+spec GRAPH_CROSS = GEOM then
+   
+%( instantiating a constant of a certain sort
+is declared as a unary operation in CASL.
+here we instantiat the boundaries and interiors of 4 lines,
+and the boundaries and interiors of 4 regions,
+corresponding to the geometrical configuration
+of the diagram we are modelling )%
+
+ops
+
+    R1b, R2b, S1b, S2b: LineBnd
+    R1i, R2i, S1i, S2i: LineInt
+    Ab, Bb, Cb, Db: RegBnd
+    Ai, Bi, Ci, Di: RegInt
+
+%axioms%
+
+%( here we declare how the defined constants
+are related by the predicates we defined in the GEOM specification )%
+
+.back_left(Ab,Bb) .back_left(Ab,Db) .back_left(Cb,Bb) .back_left(Cb,Db) 
+.front(Ab,Cb)     .front(Db,Bb)
+.intrsct(Ab,R1b)  .intrsct(R1b,R2b) .intrsct(R2b,Bb)
+.intrsct(Cb,S1b)  .intrsct(S1b,S2b) .intrsct(S2b,Db)
+.intrsct(R1b,S2b) .intrsct(S1b,R2b) 
+.disjoint(Ab,Bb)  .disjoint(Ab,Db)  .disjoint(Cb,Bb)  
+.disjoint(Cb,Db)  .disjoint(Ab,Cb)  .disjoint(Db,Bb)
+
+.back_left(Ai,Bi) .back_left(Ai,Di) .back_left(Ci,Bi) .back_left(Ci,Di)
+.front(Ai,Ci)     .front(Di,Bi)
+.disjoint(Ai,Bi)  .disjoint(Ai,Di)  .disjoint(Ci,Bi)
+.disjoint(Ci,Di)  .disjoint(Ai,Ci)  .disjoint(Di,Bi)
+
+end
+
+
+%( we do as before to define a specification
+for the graph with the non-crossing lines )%
+
+spec GRAPH_NON_CROSS = GEOM then
+    
+ops
+
+    Rb, Sb: LineBnd
+    Ri, Si: LineInt
+    Ab, Bb, Cb, Db: RegBnd
+    Ai, Bi, Ci, Di: RegInt
+
+%axioms%
+
+.back_left(Ab,Bb)  .back_left(Cb,Bb) .back_left(Cb,Db)
+.front_left(Ab,Db) .front(Ab,Cb)     .front(Bb,Db)
+.intrsct(Ab,Rb)    .intrsct(Bb,Rb)   .intrsct(Cb,Sb)  .intrsct(Db,Sb)
+.disjoint(Sb,Rb)   .disjoint(Ab,Bb)  .disjoint(Ab,Db) .disjoint(Cb,Bb)   
+.disjoint(Cb,Db)   .disjoint(Ab,Cb)  .disjoint(Db,Bb)   
+.disjoint(Sb,Ab)   .disjoint(Sb,Bb)  .disjoint(Rb,Cb) .disjoint(Rb,Db)
+
+.back_left(Ai,Bi)  .back_left(Ci,Bi) .back_left(Ci,Di)
+.front_left(Ai,Di) .front(Ai,Ci)     .front(Bi,Di)
+.disjoint(Si,Ri)   .disjoint(Ai,Bi)  .disjoint(Ai,Di) .disjoint(Ci,Bi)   
+.disjoint(Ci,Di)   .disjoint(Ai,Ci)  .disjoint(Di,Bi)
+
+.disjoint(Si,Ai)   .disjoint(Si,Bi)  .disjoint(Ri,Ci) .disjoint(Ri,Di)
+
+end
+
+
+
+%( specifications defining the set theoretical semantics )%
+
+spec SEM = 
+
+sort Set
+
+preds 
+    related: Set * Set
+
+%axioms%
+
+.forall p, s: Set .related(p,s) => related(s,p)
+
+
+
+spec A_SEM = SEM then
+
+ops a,b,c,d: Set
+
+. related(a,b) . not related(a,d) 
+. related(c,d) . not related(a,c)
+
+
+
+%( specification of the LINK schema )%
+
+spec LINKAGE =
+
+sorts 
+    Link, Entity, LinkSchema
+    %( Link is a subsort of Entity. 
+    LinkSchema sort corresponds to the entire configuration )%
+
+ops 
+    %( each LinkSchema is input to some operations and gives as output 
+    a unique Link, a unique "from" Entity and a unique "to" Entity )%
+
+    link: LinkSchema -> Link
+    
+    anEnt: LinkSchema -> Entity
+    
+    anotherEnt: LinkSchema -> Entity
+
+pred 
+    linked: Entity * Entity
+    %( "linked" predicate takes as arguments two Entities )%
+
+%axioms%
+
+    forall s:LinkSchema
+        %( entities of a LinkSchema are linked )%
+        . linked(anEnt(s),anotherEnt(s))
+
+    forall l:Link
+        %( links are always part of a unique link schema )%
+        . exists! s:LinkSchema . link(s) = l
+
+    forall x,y : Entity; s: LinkSchema
+
+        . ( anEnt(s) = x /\ anotherEnt(s) = y ) \/ ( anEnt(s) = y /\ anotherEnt(s) = x ) => linked(x,y)
+        %( linked entities are always part of some -not necessarily unique- link schema )% 
+
+        .linked(x,y) <=> linked(y,x) %symmetry%
+
+        .not linked(x,x) %irreflexivity%
+
+end
+
+
+
+
+
+%( INSTANTIATION OF LINKAGE )%
+
+spec A_LINKAGE = LINKAGE then
+
+
+ops
+
+    e1, e2, e3, e4: Entity
+    link12, link34: Link
+    lsc12, lsc34: LinkSchema
+
+%axioms%
+
+    .anEnt(lsc12)=e1 .anotherEnt(lsc12)=e2 .link(lsc12)=link12
+    .anEnt(lsc34)=e3 .anotherEnt(lsc34)=e4 .link(lsc34)=link34
+
+end
+
+
+
+%( here we define some specifications called 'generic spaces' as auxiliary 
+in order to implement the desired correspondences among the input spaces
+(geometry, semantics and LINK schema)
+
+They result in an identification of the following in the blend:
+LINK       / GRAPH CROSS and GRAPH NON CROSS  / SEMANTICS
+----------------------------------------------------------
+Entity     / RegInt, RegBnd                   /  Set
+Link       / LineInt, LineBnd                 /
+linked     /                                  /  related  )%
+
+%(GENERIC SPACES)%
+
+
+
+spec GENERIC_1 =
+
+sorts Reg_merged
+
+ops
+    ga, gb, gc, gd: Reg_merged
+
+preds
+    assoc: Reg_merged * Reg_merged
+
+
+view b : GENERIC_1 to A_SEM =
+Reg_merged |-> Set,
+ga |-> a, gb |-> b, gc |-> c, gd |-> d,
+assoc |-> related
+
+view c : GENERIC_1 to A_LINKAGE =
+Reg_merged |-> Entity,
+ga |-> e1, gb |-> e2, gc |-> e3, gd |-> e4,
+assoc |-> linked
+
+
+
+spec GENERIC_2 =
+
+sorts Reg_merged1, Reg_merged2, Line_merged1, Line_merged2
+
+ops
+    ga1, gb1, gc1, gd1: Reg_merged1
+    ga2, gb2, gc2, gd2: Reg_merged2
+    R1g1, R2g1, S1g1, S2g1: Line_merged1
+    R1g2, R2g2, S1g2, S2g2: Line_merged2
+
+
+view d : GENERIC_2 to GRAPH_CROSS =
+Reg_merged1 |-> RegBnd, Line_merged1 |-> LineBnd,
+Reg_merged2 |-> RegInt, Line_merged2 |-> LineInt,
+ga1 |-> Ab, gb1 |-> Bb, gc1 |-> Cb, gd1 |-> Db,
+ga2 |-> Ai, gb2 |-> Bi, gc2 |-> Ci, gd2 |-> Di,
+R1g1 |-> R1b, R2g1 |-> R2b, S1g1 |-> S1b, S2g1 |-> S2b,
+R1g2 |-> R1i, R2g2 |-> R2i, S1g2 |-> S1i, S2g2 |-> S2i
+
+
+view e : GENERIC_2 to A_LINKAGE =
+Reg_merged1 |-> Entity, Line_merged1 |-> Link,
+Reg_merged2 |-> Entity, Line_merged2 |-> Link,
+ga1 |-> e1, gb1 |-> e2, gc1 |-> e3, gd1 |-> e4,
+ga2 |-> e1, gb2 |-> e2, gc2 |-> e3, gd2 |-> e4,
+R1g1 |-> link12, R2g1 |-> link12, S1g1 |-> link34, S2g1 |-> link34
+R1g2 |-> link12, R2g2 |-> link12, S1g2 |-> link34, S2g2 |-> link34
+
+
+spec CROSS_BLEND_1 = combine b, c, d, e
+
+%( the first possible blend of the crossing graph is consistent )%
+
+
+
+view g : GENERIC_1 to A_SEM =
+Reg_merged |-> Set,
+ga |-> a, gb |-> b, gc |-> c, gd |-> d,
+assoc |-> related
+
+view h : GENERIC_1 to A_LINKAGE =
+Reg_merged |-> Entity,
+ga |-> e1, gb |-> e4, gc |-> e3, gd |-> e2,
+assoc |-> linked
+
+
+
+view i : GENERIC_2 to GRAPH_CROSS =
+Reg_merged1 |-> RegBnd, Line_merged1 |-> LineBnd,
+Reg_merged2 |-> RegInt, Line_merged2 |-> LineInt,
+ga1 |-> Ab, gb1 |-> Db, gc1 |-> Cb, gd1 |-> Bb,
+ga2 |-> Ai, gb2 |-> Di, gc2 |-> Ci, gd2 |-> Bi,
+R1g1 |-> R1b, R2g1 |-> R2b, S1g1 |-> S1b, S2g1 |-> S2b,
+R1g2 |-> R1i, R2g2 |-> R2i, S1g2 |-> S1i, S2g2 |-> S2i
+
+
+view j : GENERIC_2 to A_LINKAGE =
+Reg_merged1 |-> Entity, Line_merged1 |-> Link,
+Reg_merged2 |-> Entity, Line_merged2 |-> Link,
+ga1 |-> e1, gb1 |-> e4, gc1 |-> e3, gd1 |-> e2,
+ga2 |-> e1, gb2 |-> e4, gc2 |-> e3, gd2 |-> e2,
+R1g1 |-> link12, R2g1 |-> link12, S1g1 |-> link34, S2g1 |-> link34
+R1g2 |-> link12, R2g2 |-> link12, S1g2 |-> link34, S2g2 |-> link34
+
+
+
+spec CROSS_BLEND_2 = combine g, h, i, j
+
+
+%( the second possible blend of the crossing graph is consistent )%
+
+
+
+spec GENERIC_3 =
+
+sorts Reg_merged1, Reg_merged2, Line_merged1, Line_merged2
+
+ops
+    ga1, gb1, gc1, gd1: Reg_merged1
+    ga2, gb2, gc2, gd2: Reg_merged2
+    Rg1, Sg1: Line_merged1
+    Rg2, Sg2: Line_merged2
+
+
+
+view l : GENERIC_3 to GRAPH_NON_CROSS =
+Reg_merged1 |-> RegBnd, Line_merged1 |-> LineBnd,
+Reg_merged2 |-> RegInt, Line_merged2 |-> LineInt,
+ga1 |-> Ab, gb1 |-> Bb, gc1 |-> Cb, gd1 |-> Db,
+ga2 |-> Ai, gb2 |-> Bi, gc2 |-> Ci, gd2 |-> Di,
+Rg1 |-> Rb, Sg1 |-> Sb,
+Rg2 |-> Ri, Sg2 |-> Si
+
+view m : GENERIC_3 to A_LINKAGE =
+Reg_merged1 |-> Entity, Line_merged1 |-> Link,
+Reg_merged2 |-> Entity, Line_merged2 |-> Link,
+ga1 |-> e1, gb1 |-> e2, gc1 |-> e3, gd1 |-> e4,
+ga2 |-> e1, gb2 |-> e2, gc2 |-> e3, gd2 |-> e4,
+Rg1 |-> link12, Sg1 |-> link34,
+Rg2 |-> link12, Sg2 |-> link34
+
+
+spec NON_CROSS_BLEND = combine b, c, l, m
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%( the first possible blend of the crossing graph is consistent )%
+
+spec CROSS_BLEND_1 =
+
+sorts 
+    Line, Line_merged2, LinkSchema, Point, RegExt, Reg_merged2, Reg
+
+ops
+
+%( unary operations instantiating constants )%
+
+    link12, link34 : Line_merged2
+    lsc12, lsc34 : LinkSchema
+
+%( binary operations/functions )%
+
+    anEnt : LinkSchema -> Reg_merged2
+    anotherEnt : LinkSchema -> Reg_merged2
+    boundaryOf : Line -> Line_merged2
+    ga2, gb2, gc2, gd2 : Reg_merged2
+    gn_boundaryOf6 : Reg -> Reg_merged2
+    gn_interiorOf12 : Reg -> Reg_merged2
+    interiorOf : Line -> Line_merged2
+    link : LinkSchema -> Line_merged2
+
+preds
+
+%( Binary predicates over various sorts.
+Those with same name but with different sorts as arguments
+get automatically renamed to: gn_(old_name)(number) )%
+
+    back, back_left, back_right, disjoint,
+    front, front_left, front_right, gn_back4,
+    gn_back_left11, gn_back_right18, gn_disjoint25,
+    gn_front32, gn_front_left39, gn_front_right46,
+    gn_intrsct53, gn_left60, gn_right67, gn_subset74,
+    intrsct, left, right, subset : Line_merged2 * Line_merged2
+
+    gn_back6, gn_back_left13, gn_back_right20,
+    gn_disjoint27, gn_front34, gn_front_left41,
+    gn_front_right48, gn_intrsct55, gn_left62,
+    gn_right69, gn_subset76 : Reg_merged2 * Line_merged2
+
+    gn_back7, gn_back8, gn_back_left14,
+    gn_back_left15, gn_back_right21, gn_back_right22,
+    gn_disjoint28, gn_disjoint29, gn_front35,
+    gn_front36, gn_front_left42, gn_front_left43,
+    gn_front_right49, gn_front_right50, gn_intrsct56, 
+    gn_intrsct57, gn_left63, gn_left64, gn_right70, 
+    gn_right71, gn_subset77, gn_subset78, related : Reg_merged2 * Reg_merged2
+
+    gn_back3, gn_back5, gn_back_left10,
+    gn_back_left12, gn_back_right17, gn_back_right19,
+    gn_disjoint24, gn_disjoint26, gn_front31,
+    gn_front33, gn_front_left38, gn_front_left40,
+    gn_front_right45, gn_front_right47, gn_intrsct52, 
+    gn_intrsct54, gn_left59, gn_left61, gn_right66, 
+    gn_right68, gn_subset73, gn_subset75 : Line_merged2 * Reg_merged2
+
+%( axioms from SEM )%
+
+    . related(ga2, gb2) . not related(ga2, gd2) 
+    . related(gc2, gd2) . not related(ga2, gc2)
+    %(removing these 2, PLUS LINK AXIOM, all 3 blends consistent)%
+    forall p, s : Reg_merged2 . related(p, s) => related(s, p)
+
+%( axioms from GRAPH_CROSS )%
+
+    . gn_back_left14(ga2, gb2)  . gn_back_left14(ga2, gd2) . gn_back_left14(gc2, gb2)
+    . gn_back_left14(gc2, gd2)  . gn_front35(ga2, gc2)     . gn_front35(gd2, gb2)
+    . gn_intrsct55(ga2, link12) . intrsct(link12, link12)  . gn_intrsct52(link12, gb2)
+    . gn_intrsct55(gc2, link34) . intrsct(link34, link34)  . gn_intrsct52(link34, gd2)
+    . intrsct(link12, link34)   . intrsct(link34, link12)
+    . gn_disjoint28(ga2, gb2)   . gn_disjoint28(ga2, gd2)  . gn_disjoint28(gc2, gb2)
+    . gn_disjoint28(gc2, gd2)   . gn_disjoint28(ga2, gc2)  . gn_disjoint28(gd2, gb2)
+    . gn_back_left15(ga2, gb2)  . gn_back_left15(ga2, gd2) . gn_back_left15(gc2, gb2)
+    . gn_back_left15(gc2, gd2)  . gn_front36(ga2, gc2)     . gn_front36(gd2, gb2)
+    . gn_disjoint29(ga2, gb2)   . gn_disjoint29(ga2, gd2)  . gn_disjoint29(gc2, gb2)
+    . gn_disjoint29(gc2, gd2)   . gn_disjoint29(ga2, gc2)  . gn_disjoint29(gd2, gb2)
+    forall p1, p2 : Reg_merged2  . gn_intrsct56(p1, p2) <=> gn_intrsct56(p2, p1)
+    forall p1, p2 : Reg_merged2  . gn_disjoint28(p1, p2) <=> gn_disjoint28(p2, p1)
+    forall p1 : Reg_merged2      . not gn_disjoint28(p1, p1)
+    forall p1, p2 : Reg_merged2  . gn_subset77(p1, p2) => not gn_subset77(p2, p1)
+    forall p1, p2 : Reg_merged2  . gn_front35(p1, p2) <=> gn_back7(p2, p1) 
+    forall p1, p2 : Reg_merged2  . gn_front_right49(p1, p2) <=> gn_back_left14(p2, p1)
+    forall p1, p2 : Reg_merged2  . gn_right70(p1, p2) <=> gn_left63(p2, p1) 
+    forall p1, p2 : Reg_merged2  . gn_back_right21(p1, p2) <=> gn_front_left42(p2, p1)
+    forall l1, l2 : Line_merged2 . intrsct(l1, l2) <=> intrsct(l2, l1)
+    forall l1, l2 : Line_merged2 . disjoint(l1, l2) <=> disjoint(l2, l1)
+    forall l1 : Line_merged2     . not disjoint(l1, l1)
+    forall l1, l2 : Line_merged2 . front(l1, l2) <=> back(l2, l1)
+    forall l1, l2 : Line_merged2 . front_right(l1, l2) <=> back_left(l2, l1) 
+    forall l1, l2 : Line_merged2 . right(l1, l2) <=> left(l2, l1)
+    forall l1, l2 : Line_merged2 . back_right(l1, l2) <=> front_left(l2, l1)
+
+%( axioms from LINKAGE )%
+
+    . anEnt(lsc12) = ga2 . anotherEnt(lsc12) = gb2 . link(lsc12) = link12
+    . anEnt(lsc34) = gc2 . anotherEnt(lsc34) = gd2 . link(lsc34) = link34
+    forall s : LinkSchema . related(anEnt(s), anotherEnt(s))
+    forall l : Line_merged2 . exists! s : LinkSchema . link(s) = l
+    forall x, y : Reg_merged2; s : LinkSchema . (anEnt(s) = x /\ anotherEnt(s) = y)
+        \/ (anEnt(s) = y /\ anotherEnt(s) = x) => related(x, y)
+    forall x, y : Reg_merged2 . related(x, y) <=> related(y, x)
+    forall x : Reg_merged2 . not related(x, x)
+
+
+
+%( the second possible blend of the crossing graph is inconsistent )%
+
+spec CROSS_BLEND_2 =
+
+sorts 
+    Line, Line_merged2, LinkSchema, Point, RegExt, Reg_merged2, Reg
+
+ops
+
+%( unary operations instantiating constants )%
+
+    link12, link34 : Line_merged2
+    lsc12, lsc34 : LinkSchema
+
+%( binary operations/functions )%
+
+    anEnt : LinkSchema -> Reg_merged2
+    anotherEnt : LinkSchema -> Reg_merged2
+    boundaryOf : Line -> Line_merged2
+    ga2, gb2, gc2, gd2 : Reg_merged2
+    gn_boundaryOf6 : Reg -> Reg_merged2
+    gn_interiorOf12 : Reg -> Reg_merged2
+    interiorOf : Line -> Line_merged2
+    link : LinkSchema -> Line_merged2
+
+preds
+
+%( Binary predicates over various sorts.
+Those with same name but with different sorts as arguments
+get automatically renamed to: gn_(old_name)(number) )%
+
+    back, back_left, back_right, disjoint,
+    front, front_left, front_right, gn_back4,
+    gn_back_left11, gn_back_right18, gn_disjoint25,
+    gn_front32, gn_front_left39, gn_front_right46,
+    gn_intrsct53, gn_left60, gn_right67, gn_subset74,
+    intrsct, left, right, subset : Line_merged2 * Line_merged2
+
+    gn_back6, gn_back_left13, gn_back_right20,
+    gn_disjoint27, gn_front34, gn_front_left41,
+    gn_front_right48, gn_intrsct55, gn_left62,
+    gn_right69, gn_subset76 : Reg_merged2 * Line_merged2
+
+    gn_back7, gn_back8, gn_back_left14,
+    gn_back_left15, gn_back_right21, gn_back_right22,
+    gn_disjoint28, gn_disjoint29, gn_front35,
+    gn_front36, gn_front_left42, gn_front_left43,
+    gn_front_right49, gn_front_right50, gn_intrsct56, 
+    gn_intrsct57, gn_left63, gn_left64, gn_right70, 
+    gn_right71, gn_subset77, gn_subset78, related : Reg_merged2 * Reg_merged2
+
+    gn_back3, gn_back5, gn_back_left10,
+    gn_back_left12, gn_back_right17, gn_back_right19,
+    gn_disjoint24, gn_disjoint26, gn_front31,
+    gn_front33, gn_front_left38, gn_front_left40,
+    gn_front_right45, gn_front_right47, gn_intrsct52, 
+    gn_intrsct54, gn_left59, gn_left61, gn_right66, 
+    gn_right68, gn_subset73, gn_subset75 : Line_merged2 * Reg_merged2
+
+%( axioms from SEM )%
+
+    . related(ga2, gb2) . not related(ga2, gd2) 
+    . related(gc2, gd2) . not related(ga2, gc2)
+    %(removing these 2, PLUS LINK AXIOM, all 3 blends consistent)%
+    forall p, s : Reg_merged2 . related(p, s) => related(s, p)
+
+
+%( axioms from GRAPH_CROSS )%
+
+    . gn_back_left14(ga2, gb2)  . gn_back_left14(ga2, gd2) . gn_back_left14(gc2, gb2)
+    . gn_back_left14(gc2, gd2)  . gn_front35(ga2, gc2)     . gn_front35(gd2, gb2)
+    . gn_intrsct55(ga2, link12) . intrsct(link12, link12)  . gn_intrsct52(link12, gb2)
+    . gn_intrsct55(gc2, link34) . intrsct(link34, link34)  . gn_intrsct52(link34, gd2)
+    . intrsct(link12, link34)   . intrsct(link34, link12)
+    . gn_disjoint28(ga2, gb2)   . gn_disjoint28(ga2, gd2)  . gn_disjoint28(gc2, gb2)
+    . gn_disjoint28(gc2, gd2)   . gn_disjoint28(ga2, gc2)  . gn_disjoint28(gd2, gb2)
+    . gn_back_left15(ga2, gb2)  . gn_back_left15(ga2, gd2) . gn_back_left15(gc2, gb2)
+    . gn_back_left15(gc2, gd2)  . gn_front36(ga2, gc2)     . gn_front36(gd2, gb2)
+    . gn_disjoint29(ga2, gb2)   . gn_disjoint29(ga2, gd2)  . gn_disjoint29(gc2, gb2)
+    . gn_disjoint29(gc2, gd2)   . gn_disjoint29(ga2, gc2)  . gn_disjoint29(gd2, gb2)
+    forall p1, p2 : Reg_merged2  . gn_intrsct56(p1, p2) <=> gn_intrsct56(p2, p1)
+    forall p1, p2 : Reg_merged2  . gn_disjoint28(p1, p2) <=> gn_disjoint28(p2, p1)
+    forall p1 : Reg_merged2      . not gn_disjoint28(p1, p1)
+    forall p1, p2 : Reg_merged2  . gn_subset77(p1, p2) => not gn_subset77(p2, p1)
+    forall p1, p2 : Reg_merged2  . gn_front35(p1, p2) <=> gn_back7(p2, p1) 
+    forall p1, p2 : Reg_merged2  . gn_front_right49(p1, p2) <=> gn_back_left14(p2, p1)
+    forall p1, p2 : Reg_merged2  . gn_right70(p1, p2) <=> gn_left63(p2, p1) 
+    forall p1, p2 : Reg_merged2  . gn_back_right21(p1, p2) <=> gn_front_left42(p2, p1)
+    forall l1, l2 : Line_merged2 . intrsct(l1, l2) <=> intrsct(l2, l1)
+    forall l1, l2 : Line_merged2 . disjoint(l1, l2) <=> disjoint(l2, l1)
+    forall l1 : Line_merged2     . not disjoint(l1, l1)
+    forall l1, l2 : Line_merged2 . front(l1, l2) <=> back(l2, l1)
+    forall l1, l2 : Line_merged2 . front_right(l1, l2) <=> back_left(l2, l1) 
+    forall l1, l2 : Line_merged2 . right(l1, l2) <=> left(l2, l1)
+    forall l1, l2 : Line_merged2 . back_right(l1, l2) <=> front_left(l2, l1)
+
+%( axioms from LINKAGE )%
+
+    . anEnt(lsc12) = ga2 . anotherEnt(lsc12) = gd2 . link(lsc12) = link12
+    . anEnt(lsc34) = gc2 . anotherEnt(lsc34) = gb2 . link(lsc34) = link34
+    forall s : LinkSchema . related(anEnt(s), anotherEnt(s))
+    forall l : Line_merged2 . exists! s : LinkSchema . link(s) = l
+    forall x, y : Reg_merged2; s : LinkSchema . (anEnt(s) = x /\ anotherEnt(s) = y)
+        \/ (anEnt(s) = y /\ anotherEnt(s) = x) => related(x, y)
+    forall x, y : Reg_merged2 . related(x, y) <=> related(y, x)
+    forall x : Reg_merged2 . not related(x, x)
+
+
+%( the only possible blend of the non-crossing graph is consistent )%
+
+spec NON_CROSS_BLEND =
+
+sorts Line, Line_merged2, LinkSchema, Point, RegExt, Reg_merged2, Reg
+
+ops
+
+    anEnt : LinkSchema -> Reg_merged2
+    anotherEnt : LinkSchema -> Reg_merged2
+    boundaryOf : Line -> Line_merged2
+    gn_boundaryOf6 : Reg -> Reg_merged2
+    gn_interiorOf12 : Reg -> Reg_merged2
+    interiorOf : Line -> Line_merged2
+    link : LinkSchema -> Line_merged2
+
+    ga2, gb2, gc2, gd2 : Reg_merged2
+    link12, link34 : Line_merged2
+    lsc12, lsc34 : LinkSchema
+
+preds
+
+%( Binary predicates over various sorts.
+Those with same name but with different sorts as arguments
+get automatically renamed to: gn_(old_name)(number) )%
+
+    back, back_left, back_right, disjoint,
+    front, front_left, front_right, gn_back4,
+    gn_back_left11, gn_back_right18, gn_disjoint25,
+    gn_front32, gn_front_left39, gn_front_right46,
+    gn_intrsct53, gn_left60, gn_right67, gn_subset74,
+    intrsct, left, right, subset : Line_merged2 * Line_merged2
+
+    gn_back6, gn_back_left13, gn_back_right20,
+    gn_disjoint27, gn_front34, gn_front_left41,
+    gn_front_right48, gn_intrsct55, gn_left62,
+    gn_right69, gn_subset76 : Reg_merged2 * Line_merged2
+
+    gn_back7, gn_back8, gn_back_left14,
+    gn_back_left15, gn_back_right21, gn_back_right22,
+    gn_disjoint28, gn_disjoint29, gn_front35,
+    gn_front36, gn_front_left42, gn_front_left43,
+    gn_front_right49, gn_front_right50, gn_intrsct56, 
+    gn_intrsct57, gn_left63, gn_left64, gn_right70, 
+    gn_right71, gn_subset77, gn_subset78, related : Reg_merged2 * Reg_merged2
+
+    gn_back3, gn_back5, gn_back_left10,
+    gn_back_left12, gn_back_right17, gn_back_right19,
+    gn_disjoint24, gn_disjoint26, gn_front31,
+    gn_front33, gn_front_left38, gn_front_left40,
+    gn_front_right45, gn_front_right47, gn_intrsct52, 
+    gn_intrsct54, gn_left59, gn_left61, gn_right66, 
+    gn_right68, gn_subset73, gn_subset75 : Line_merged2 * Reg_merged2
+
+
+
+%( axioms from SEM )%
+
+    . related(ga2, gb2) . not related(ga2, gd2)
+    . related(gc2, gd2) . not related(ga2, gc2)
+
+%( axioms from GRAPH_NON_CROSS )%
+
+    . gn_back_left14(ga2, gb2)      . gn_front_left42(ga2, gd2)  . gn_back_left14(gc2, gb2)
+    . gn_back_left14(gc2, gd2)      . gn_front35(ga2, gc2)       . gn_front35(gb2, gd2)
+    . gn_intrsct55(ga2, link12)     . gn_intrsct55(gb2, link12)  . gn_intrsct55(gc2, link34)
+    . gn_intrsct55(gd2, link34)     . disjoint(link34, link12)   . gn_disjoint28(ga2, gb2)
+    . gn_disjoint28(ga2, gd2)       . gn_disjoint28(gc2, gb2)    . gn_disjoint28(gc2, gd2)
+    . gn_disjoint28(ga2, gc2)       . gn_disjoint28(gd2, gb2)    . gn_disjoint24(link34, ga2)
+    . gn_disjoint24(link34, gb2)    . gn_disjoint24(link12, gc2) . gn_disjoint24(link12, gd2)
+    . gn_back_left15(ga2, gb2)      . gn_front_left43(ga2, gd2)  . gn_back_left15(gc2, gb2)
+    . gn_back_left15(gc2, gd2)      . gn_front36(ga2, gc2)       . gn_front36(gb2, gd2)
+    . gn_disjoint25(link34, link12) . gn_disjoint29(ga2, gb2)    . gn_disjoint29(ga2, gd2)
+    . gn_disjoint29(gc2, gb2)       . gn_disjoint29(gc2, gd2)    . gn_disjoint29(ga2, gc2)
+    . gn_disjoint29(gd2, gb2)       . gn_disjoint26(link34, ga2) . gn_disjoint26(link34, gb2)
+    . gn_disjoint26(link12, gc2)    . gn_disjoint26(link12, gd2)
+
+    forall p1, p2 : Reg_merged2 . gn_intrsct56(p1, p2) <=> gn_intrsct56(p2, p1)
+    forall p1, p2 : Reg_merged2 . gn_disjoint28(p1, p2) <=> gn_disjoint28(p2, p1)
+    forall p1 : Reg_merged2     . not gn_disjoint28(p1, p1)
+    forall p1, p2 : Reg_merged2 . gn_subset77(p1, p2) => not gn_subset77(p2, p1) 
+    forall p1, p2 : Reg_merged2 . gn_front35(p1, p2) <=> gn_back7(p2, p1) 
+    forall p1, p2 : Reg_merged2 . gn_front_right49(p1, p2) <=> gn_back_left14(p2, p1)
+    forall p1, p2 : Reg_merged2 . gn_right70(p1, p2) <=> gn_left63(p2, p1) 
+    forall p1, p2 : Reg_merged2 . gn_back_right21(p1, p2) <=> gn_front_left42(p2, p1)
+    forall l1, l2 : Line_merged2 . intrsct(l1, l2) <=> intrsct(l2, l1)  
+    forall l1, l2 : Line_merged2 . disjoint(l1, l2) <=> disjoint(l2, l1) 
+    forall l1 : Line_merged2     . not disjoint(l1, l1)
+    forall l1, l2 : Line_merged2 . front(l1, l2) <=> back(l2, l1)
+    forall l1, l2 : Line_merged2 . front_right(l1, l2) <=> back_left(l2, l1) 
+    forall l1, l2 : Line_merged2 . right(l1, l2) <=> left(l2, l1)
+    forall l1, l2 : Line_merged2 . back_right(l1, l2) <=> front_left(l2, l1) 
+
+%( axioms from LINKAGE )%
+
+    . anEnt(lsc12) = ga2 . anotherEnt(lsc12) = gb2 . link(lsc12) = link12
+    . anEnt(lsc34) = gc2 . anotherEnt(lsc34) = gd2 . link(lsc34) = link34
+    forall s : LinkSchema . related(anEnt(s), anotherEnt(s))
+    forall l : Line_merged2 . exists! s : LinkSchema . link(s) = l
+    forall x, y : Reg_merged2; s : LinkSchema . (anEnt(s) = x /\ anotherEnt(s) = y)
+        \/ (anEnt(s) = y /\ anotherEnt(s) = x) => related(x, y)
+    forall x, y : Reg_merged2 . related(x, y) <=> related(y, x)
+    forall x : Reg_merged2 . not related(x, x)
+
+
+
+
+

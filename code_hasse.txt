@@ -1,0 +1,874 @@
+
+%( the following CASL code is split in two parts (line 573),
+implementing the blends of CHAIN and VERTICAL-SCALE 
+with the geometric configuration separately.
+Each - up to each colimit, line 358 CHAIN COLIMIT,
+line 760 VERTICAL SCALE COLIMIT - can be copied and executed 
+online in http://rest.hets.eu/ to give rise 
+to a network of specifications of image schemas.
+Then by clicking: commands > compute colimit
+one can reproduce the colimits=blends we present here.
+After each blend, we also present some proof obligations,
+i.e., additional formulas that are entailed by the axioms of the blend )%
+
+
+spec LINKAGE =
+
+sorts 
+	Link, Entity, LinkSchema
+
+ops 
+	%( each LinkSchema is input to some operations and gives as output 
+	a unique Link, and two distinct entities )%
+
+	link: LinkSchema -> Link
+	
+	anEnt: LinkSchema -> Entity
+	
+	anotherEnt: LinkSchema -> Entity
+
+pred 
+	linked: Entity * Entity
+	%( "linked" predicate takes as arguments two Entities )%
+
+%axioms%
+
+    forall s:LinkSchema
+    	%( entities of a LinkSchema are linked )%
+    	. linked(anEnt(s),anotherEnt(s))
+
+    forall l:Link
+    	%( links are always part of a unique link schema )%
+    	. exists! s:LinkSchema . link(s) = l
+
+	forall x,y : Entity; s: LinkSchema
+    	. linked(x,y) <=> ( anEnt(s) = x /\ anotherEnt(s) = y ) \/ ( anEnt(s) = y /\ anotherEnt(s) = x )
+    	%( linked entities are always part of some -not necessarily unique- link schema )%
+
+    	.linked(x,y) <=> linked(y,x) %symmetry%
+
+    	.not linked(x,x) %irreflexivity%
+
+end
+
+
+%( Instantiation of the LINK schemas )%
+
+spec A_LINKAGE = LINKAGE then
+	
+ops
+	e_1, e_2, e_3, e_4, e_5, e_6, e_7, e_8: Entity
+
+	lsc_21, lsc_31, lsc_41, lsc_52, lsc_62, lsc_53, 
+	lsc_73, lsc_64, lsc_74, lsc_85, lsc_86, lsc_87: LinkSchema
+
+	link_21, link_31, link_41, link_52, link_62, link_53, 
+	link_73, link_64, link_74, link_85, link_86, link_87: Link
+
+	%( instantiate one LinkSchema and one Link for each pair of 
+	LinkedEntities we want to instantiate )%
+
+
+%axioms%
+	
+	%( specify which LinkSchema corresponds to which 
+	of the Links and LinkedEntities instantiated )%
+
+	.anEnt(lsc_21)=e_2 .anotherEnt(lsc_21)=e_1 .link(lsc_21)=link_21
+	.anEnt(lsc_31)=e_3 .anotherEnt(lsc_31)=e_1 .link(lsc_31)=link_31
+	.anEnt(lsc_41)=e_4 .anotherEnt(lsc_41)=e_1 .link(lsc_41)=link_41
+	.anEnt(lsc_52)=e_5 .anotherEnt(lsc_52)=e_2 .link(lsc_52)=link_52
+	.anEnt(lsc_62)=e_6 .anotherEnt(lsc_62)=e_2 .link(lsc_62)=link_62
+	.anEnt(lsc_53)=e_5 .anotherEnt(lsc_53)=e_3 .link(lsc_53)=link_53
+	.anEnt(lsc_73)=e_7 .anotherEnt(lsc_73)=e_3 .link(lsc_73)=link_73
+	.anEnt(lsc_64)=e_6 .anotherEnt(lsc_64)=e_4 .link(lsc_64)=link_64
+	.anEnt(lsc_74)=e_7 .anotherEnt(lsc_74)=e_4 .link(lsc_74)=link_74
+	.anEnt(lsc_85)=e_8 .anotherEnt(lsc_85)=e_5 .link(lsc_85)=link_85
+	.anEnt(lsc_86)=e_8 .anotherEnt(lsc_86)=e_6 .link(lsc_86)=link_86
+	.anEnt(lsc_87)=e_8 .anotherEnt(lsc_87)=e_7 .link(lsc_87)=link_87
+
+end
+
+
+spec SOURCE_PATH_GOAL =
+
+sorts 
+	SPGschema, Path, Location, Trajector
+     
+ops
+	source, goal: SPGschema -> Location
+    path: SPGschema -> Path
+    trajector: SPGschema -> Trajector
+
+preds 
+	placed : Trajector * Location
+    	inPath : Location * Path 
+    	isFollowedBy: Location * Location * Path 
+    	__contiguous__: Location * Location
+
+%axioms%
+    forall p : Path
+    	%( paths are always part of a unique path schema )%
+    	. exists! s:SPGschema . path(s) = p
+
+    forall s: SPGschema
+    	%( source and goal locations are in the path, and they are distinct )%
+    	. inPath(source(s),path(s))
+    	. inPath(goal(s),path(s))
+    	. not source(s) = goal(s) 
+    	%( trajectors are on a unique location in the path )%
+    	. exists! l:Location . inPath(l,path(s)) /\ placed(trajector(s),l) 
+
+
+    forall k,l: Location; p: Path
+    	%( 'contiguous' is the symmetric closure of the following relation )%
+    	. k contiguous l <=> isFollowedBy(k,l,p) \/ isFollowedBy(l,k,p)
+
+	forall s: SPGschema; l: Location
+    	. not (isFollowedBy(l,source(s),path(s)) \/ isFollowedBy(goal(s),l,path(s)))
+    	%( no location is followed by the source or follows the goal )%
+    	. inPath(l,path(s)) /\ (not l = source(s) ) 
+    		=> exists! k: Location . inPath(k,path(s)) /\ isFollowedBy(k,l,path(s))
+    	%( any location on the path, except the source, follows exactly one location on the same path )%
+    	. inPath(l,path(s)) /\ (not l = goal(s) ) 
+    		=> exists! m:Location . inPath(m,path(s)) /\ isFollowedBy(l,m,path(s))
+    	%( any location on the path, except the goal, is followed by exactly one location on the same path )%
+
+	forall k, l: Location; p: Path
+		.isFollowedBy(k,l,p) \/ isFollowedBy(l,k,p) => inPath(k,p) /\ inPath(l,p)
+		%( any two contiguous locations form a path that contains them )%
+
+end
+
+
+spec A_SOURCE_PATH_GOAL = SOURCE_PATH_GOAL then
+
+ops
+
+	l_1, l_2, l_3, l_4, l_5, l_6, l_7, l_8: Location
+	p_1, p_2, p_3, p_4, p_5, p_6: Path
+	s_1, s_2, s_3, s_4, s_5, s_6: SPGschema
+
+%axioms%
+
+	.isFollowedBy(l_2,l_1,p_1) .isFollowedBy(l_5,l_2,p_1) .isFollowedBy(l_8,l_5,p_1)
+	.isFollowedBy(l_3,l_1,p_2) .isFollowedBy(l_5,l_3,p_2) .isFollowedBy(l_8,l_5,p_2)
+	.isFollowedBy(l_2,l_1,p_3) .isFollowedBy(l_6,l_2,p_3) .isFollowedBy(l_8,l_6,p_3)
+	.isFollowedBy(l_3,l_1,p_4) .isFollowedBy(l_7,l_3,p_4) .isFollowedBy(l_8,l_7,p_4)
+	.isFollowedBy(l_4,l_1,p_5) .isFollowedBy(l_7,l_4,p_5) .isFollowedBy(l_8,l_7,p_5)
+	.isFollowedBy(l_4,l_1,p_6) .isFollowedBy(l_6,l_4,p_6) .isFollowedBy(l_8,l_6,p_6)
+
+	.source(s_1)=l_8 .path(s_1)=p_1 .goal(s_1)=l_1
+	.source(s_2)=l_8 .path(s_2)=p_2 .goal(s_2)=l_1
+	.source(s_3)=l_8 .path(s_3)=p_3 .goal(s_3)=l_1
+	.source(s_4)=l_8 .path(s_4)=p_4 .goal(s_4)=l_1
+	.source(s_5)=l_8 .path(s_5)=p_5 .goal(s_5)=l_1
+	.source(s_6)=l_8 .path(s_6)=p_6 .goal(s_6)=l_1
+
+end
+
+
+%( Specification of the geometric configuration )%
+
+spec A_HASSE_CONFIG =
+	sorts Point, Line
+	%( here the sorts needed are a Point and a Line )%
+
+ops
+	
+	c_1, c_2, c_3, c_4, c_5, c_6, c_7, c_8: Point
+	%( instantiate eight points )%
+
+	r_21, r_31, r_41, r_52, r_53, r_62, r_64, 
+	r_73, r_74, r_85, r_86, r_87: Line
+	%( instantiate twelve Lines )%
+
+preds
+	%( the "intersect" predicate is defined on pairs of Points, pairs of Lines, or a Point and a Line )%
+	intersectLL: Line * Line
+	intersectLP: Line * Point
+	intersectPP: Point * Point
+
+	%( these predicates are defined on pairs of Lines, pairs of Points, 
+	or a Line and a Point, and they express relative position )%
+
+	__backPP__,__frontPP__,__leftPP__,__leftBackPP__,__leftFrontPP__,
+	__rightPP__,__rightBackPP__,__rightFrontPP__  : Point * Point
+
+	__backLP__,__frontLP__,__leftLP__,__leftBackLP__,__leftFrontLP__,
+	__rightLP__,__rightBackLP__,__rightFrontLP__  : Line * Point
+
+	__backLL__,__frontLL__,__leftLL__,__leftBackLL__,__leftFrontLL__,
+	__rightLL__,__rightBackLL__,__rightFrontLL__  : Line * Line
+
+%axioms%
+
+	%( describe the precise relative positions of all pairs of instantiated Points )%
+	.c_1 rightBackPP c_2 .c_2 leftFrontPP c_1 
+	.c_1 rightBackPP c_5 .c_5 leftFrontPP c_1
+	.c_3 rightBackPP c_5 .c_5 leftFrontPP c_3 
+	.c_4 rightBackPP c_5 .c_5 leftFrontPP c_4 
+	.c_4 rightBackPP c_6 .c_6 leftFrontPP c_4 
+	.c_4 rightBackPP c_8 .c_8 leftFrontPP c_4 
+	.c_7 rightBackPP c_8 .c_8 leftFrontPP c_7 
+
+	.c_1 leftBackPP c_4 .c_4 rightFrontPP c_1 
+	.c_1 leftBackPP c_7 .c_7 rightFrontPP c_1 
+	.c_2 leftBackPP c_6 .c_6 rightFrontPP c_2 
+	.c_2 leftBackPP c_7 .c_7 rightFrontPP c_2 
+	.c_2 leftBackPP c_8 .c_8 rightFrontPP c_2 
+	.c_3 leftBackPP c_7 .c_7 rightFrontPP c_3 
+	.c_5 leftBackPP c_8 .c_8 rightFrontPP c_5 
+
+	.c_1 backPP c_3 .c_3 frontPP c_1 
+	.c_1 backPP c_6 .c_6 frontPP c_1 .c_2 leftPP c_3 .c_3 rightPP c_2 
+	.c_1 backPP c_8 .c_8 frontPP c_1 .c_2 leftPP c_4 .c_4 rightPP c_2 
+	.c_2 backPP c_5 .c_5 frontPP c_2 .c_3 leftPP c_4 .c_4 rightPP c_3 
+	.c_3 backPP c_6 .c_6 frontPP c_3 .c_5 leftPP c_6 .c_6 rightPP c_5 
+	.c_3 backPP c_8 .c_8 frontPP c_3 .c_5 leftPP c_7 .c_7 rightPP c_5 
+	.c_4 backPP c_7 .c_7 frontPP c_4 .c_6 leftPP c_7 .c_7 rightPP c_6 
+	.c_6 backPP c_8 .c_8 frontPP c_6 
+
+	%( describe the precise topological relation - here, intersection - 
+	of Lines with Points and lines with lines )%
+	.intersectLP(r_21,c_1) .intersectLP(r_21,c_2) 
+	.intersectLP(r_31,c_1) .intersectLP(r_31,c_3)
+	.intersectLP(r_41,c_1) .intersectLP(r_41,c_4)
+	.intersectLP(r_52,c_2) .intersectLP(r_52,c_5) 
+	.intersectLP(r_53,c_3) .intersectLP(r_53,c_5)
+	.intersectLP(r_62,c_2) .intersectLP(r_62,c_6) 
+	.intersectLP(r_64,c_4) .intersectLP(r_64,c_6)
+	.intersectLP(r_73,c_3) .intersectLP(r_73,c_7)
+	.intersectLP(r_74,c_4) .intersectLP(r_74,c_7) 
+	.intersectLP(r_85,c_5) .intersectLP(r_85,c_8) 
+	.intersectLP(r_86,c_6) .intersectLP(r_86,c_8)
+	.intersectLP(r_87,c_7) .intersectLP(r_87,c_8) 
+
+	.intersectLL(r_53,r_62) .intersectLL(r_64,r_73)
+
+end
+
+
+
+%(GENERIC SPACES)%
+
+%( The generic spaces identify sorts Entity (from LINK), Point (from HASSE CONFIG) and Location (from PATH) into a sort named Node. Also sorts Link and Line are identified,
+and predicates linked and contiguous (from PATH).  )%
+
+spec GENERIC_1 =
+
+sort Node
+	
+ops
+	id_1, id_2, id_3, id_4, 
+	id_5, id_6, id_7, id_8: Node
+
+
+view 1a : GENERIC_1 to A_LINKAGE = 
+	Node |-> Entity, 
+	id_1 |-> e_1, id_2 |-> e_2, 
+	id_3 |-> e_3, id_4 |-> e_4, id_5 |-> e_5, 
+	id_6 |-> e_6, id_7 |-> e_7, id_8 |-> e_8
+
+
+view 1b : GENERIC_1 to A_HASSE_CONFIG = 
+	Node |-> Point, 
+	id_1 |-> c_1, id_2 |-> c_2,
+	id_3 |-> c_3, id_4 |-> c_4, id_5 |-> c_5, 
+	id_6 |-> c_6, id_7 |-> c_7, id_8 |-> c_8
+
+
+view 1c : GENERIC_1 to A_SOURCE_PATH_GOAL = 
+	Node |-> Location, 
+	id_1 |-> l_1, id_2 |-> l_2,
+	id_3 |-> l_3, id_4 |-> l_4, id_5 |-> l_5, 
+	id_6 |-> l_6, id_7 |-> l_7, id_8 |-> l_8
+
+
+
+spec GENERIC_2 =
+
+sorts Node
+
+ops
+
+	id_1, id_2, id_3, id_4, 
+	id_5, id_6, id_7, id_8: Node
+
+pred assoc: Node * Node
+
+end
+
+
+view 2a : GENERIC_2 to A_LINKAGE = 
+	Node |-> Entity, 
+	id_1 |-> e_1, id_2 |-> e_2, 
+	id_3 |-> e_3, id_4 |-> e_4, id_5 |-> e_5, 
+	id_6 |-> e_6, id_7 |-> e_7, id_8 |-> e_8,
+	assoc |-> linked
+
+view 2b : GENERIC_2 to A_SOURCE_PATH_GOAL = 
+	Node |-> Location, 
+	id_1 |-> l_1, id_2 |-> l_2, 
+	id_3 |-> l_3, id_4 |-> l_4, id_5 |-> l_5, 
+	id_6 |-> l_6, id_7 |-> l_7, id_8 |-> l_8,
+	assoc |-> __contiguous__
+
+
+spec GENERIC_3 =
+
+sorts Node, Edge
+
+ops
+
+	id_1, id_2, id_3, id_4, 
+	id_5, id_6, id_7, id_8: Node
+
+	e_21, e_31, e_41, e_52, e_53, e_62, 
+	e_64, e_73, e_74, e_85, e_86, e_87: Edge
+
+end
+
+
+view 3a : GENERIC_3 to A_LINKAGE = 
+	Edge |-> Link, Node |-> Entity, 
+	id_1 |-> e_1, id_2 |-> e_2, 
+	id_3 |-> e_3, id_4 |-> e_4, id_5 |-> e_5, 
+	id_6 |-> e_6, id_7 |-> e_7, id_8 |-> e_8,
+	e_21 |-> link_21, e_31 |-> link_31, e_41 |-> link_41, 
+	e_52 |-> link_52, e_53 |-> link_53, e_62 |-> link_62,
+	e_64 |-> link_64, e_73 |-> link_73, e_74 |-> link_74, 
+	e_85 |-> link_85, e_86 |-> link_86, e_87 |-> link_87
+
+
+view 3b : GENERIC_3 to A_HASSE_CONFIG = 
+	Edge |-> Line, Node |-> Point, 
+	id_1 |-> c_1, id_2 |-> c_2, 
+	id_3 |-> c_3, id_4 |-> c_4, id_5 |-> c_5, 
+	id_6 |-> c_6, id_7 |-> c_7, id_8 |-> c_8,
+	e_21 |-> r_21, e_31 |-> r_31, e_41 |-> r_41, 
+	e_52 |-> r_52, e_53 |-> r_53, e_62 |-> r_62,
+	e_64 |-> r_64, e_73 |-> r_73, e_74 |-> r_74, 
+	e_85 |-> r_85, e_86 |-> r_86, e_87 |-> r_87
+
+
+
+%( CHAIN BLEND )%
+
+
+spec COLIMIT_CHAIN = 
+
+sorts Edge, LinkSchema, Node, Path, SPGschema, Trajector
+
+ops
+
+	id_1, id_2, id_3, id_4, id_5, id_6, id_7, id_8 : Node
+	lsc_21, lsc_31, lsc_41, lsc_52, lsc_53, lsc_62, 
+	lsc_64, lsc_73, lsc_74, lsc_85,  lsc_86, lsc_87 : LinkSchema
+	p_1, p_2, p_3, p_4, p_5, p_6 : Path
+	e_21, e_31, e_41, e_52, e_53, e_62, 
+	e_64, e_73, e_74, e_85, e_86, e_87 : Edge
+	s_1, s_2, s_3, s_4, s_5, s_6 : SPGschema
+
+	anEnt, anotherEnt : LinkSchema -> Node
+	goal, source : SPGschema -> Node
+	link : LinkSchema -> Edge
+	path : SPGschema -> Path
+	trajector : SPGschema -> Trajector
+
+preds
+
+	__backPP__,__frontPP__,__leftPP__,__leftBackPP__,__leftFrontPP__,
+	__rightPP__,__rightBackPP__,__rightFrontPP__,intersectPP : Node * Node
+
+	__backLP__,__frontLP__,__leftLP__,__leftBackLP__,__leftFrontLP__,
+	__rightLP__,__rightBackLP__,__rightFrontLP__,intersectLP  : Edge * Node
+
+	__backLL__,__frontLL__,__leftLL__,__leftBackLL__,__leftFrontLL__,
+	__rightLL__,__rightBackLL__,__rightFrontLL__,intersectLL  : Edge * Edge
+
+	inPath : Node * Path
+	isFollowedBy : Node * Node * Path
+	linked : Node * Node
+	placed : Trajector * Node
+
+%axioms%
+
+	%( axioms incorporated from the geometry, i.e., HASSE_CONFIG )%
+
+	.id_1 rightBackPP id_2 .id_2 leftFrontPP id_1 
+	.id_1 rightBackPP id_5 .id_5 leftFrontPP id_1
+	.id_3 rightBackPP id_5 .id_5 leftFrontPP id_3 
+	.id_4 rightBackPP id_5 .id_5 leftFrontPP id_4 
+	.id_4 rightBackPP id_6 .id_6 leftFrontPP id_4 
+	.id_4 rightBackPP id_8 .id_8 leftFrontPP id_4 
+	.id_7 rightBackPP id_8 .id_8 leftFrontPP id_7 
+
+	.id_1 leftBackPP id_4 .id_4 rightFrontPP id_1 
+	.id_1 leftBackPP id_7 .id_7 rightFrontPP id_1 
+	.id_2 leftBackPP id_6 .id_6 rightFrontPP id_2 
+	.id_2 leftBackPP id_7 .id_7 rightFrontPP id_2 
+	.id_2 leftBackPP id_8 .id_8 rightFrontPP id_2 
+	.id_3 leftBackPP id_7 .id_7 rightFrontPP id_3 
+	.id_5 leftBackPP id_8 .id_8 rightFrontPP id_5 
+
+	.id_1 backPP id_3 .id_3 frontPP id_1 
+	.id_1 backPP id_6 .id_6 frontPP id_1 .id_2 leftPP id_3 .id_3 rightPP id_2 
+	.id_1 backPP id_8 .id_8 frontPP id_1 .id_2 leftPP id_4 .id_4 rightPP id_2 
+	.id_2 backPP id_5 .id_5 frontPP id_2 .id_3 leftPP id_4 .id_4 rightPP id_3 
+	.id_3 backPP id_6 .id_6 frontPP id_3 .id_5 leftPP id_6 .id_6 rightPP id_5 
+	.id_3 backPP id_8 .id_8 frontPP id_3 .id_5 leftPP id_7 .id_7 rightPP id_5 
+	.id_4 backPP id_7 .id_7 frontPP id_4 .id_6 leftPP id_7 .id_7 rightPP id_6 
+	.id_6 backPP id_8 .id_8 frontPP id_6 
+
+	.intersectLP(e_21,id_1) .intersectLP(e_21,id_2) 
+	.intersectLP(e_31,id_1) .intersectLP(e_31,id_3)
+	.intersectLP(e_41,id_1) .intersectLP(e_41,id_4)
+	.intersectLP(e_52,id_2) .intersectLP(e_52,id_5) 
+	.intersectLP(e_53,id_3) .intersectLP(e_53,id_5)
+	.intersectLP(e_62,id_2) .intersectLP(e_62,id_6) 
+	.intersectLP(e_64,id_4) .intersectLP(e_64,id_6)
+	.intersectLP(e_73,id_3) .intersectLP(e_73,id_7)
+	.intersectLP(e_74,id_4) .intersectLP(e_74,id_7) 
+	.intersectLP(e_85,id_5) .intersectLP(e_85,id_8) 
+	.intersectLP(e_86,id_6) .intersectLP(e_86,id_8)
+	.intersectLP(e_87,id_7) .intersectLP(e_87,id_8) 
+
+	.intersectLL(e_53,e_62) .intersectLL(e_64,e_73)
+
+	%( axioms incorporated from the SOURCE-PATH-GOAL )%
+
+	.isFollowedBy(id_2, id_1, p_1) .isFollowedBy(id_5, id_2, p_1) 
+	.isFollowedBy(id_8, id_5, p_1) .isFollowedBy(id_3, id_1, p_2)
+	.isFollowedBy(id_5, id_3, p_2) .isFollowedBy(id_8, id_5, p_2)
+	.isFollowedBy(id_2, id_1, p_3) .isFollowedBy(id_6, id_2, p_3)
+	.isFollowedBy(id_8, id_6, p_3) .isFollowedBy(id_3, id_1, p_4)
+	.isFollowedBy(id_7, id_3, p_4) .isFollowedBy(id_8, id_7, p_4)
+	.isFollowedBy(id_4, id_1, p_5) .isFollowedBy(id_7, id_4, p_5)
+	.isFollowedBy(id_8, id_7, p_5) .isFollowedBy(id_4, id_1, p_6)
+	.isFollowedBy(id_6, id_4, p_6) .isFollowedBy(id_8, id_6, p_6)
+
+	.source(s_1) = id_8 .path(s_1) = p_1 .goal(s_1) = id_1
+	.source(s_2) = id_8 .path(s_2) = p_2 .goal(s_2) = id_1
+	.source(s_3) = id_8 .path(s_3) = p_3 .goal(s_3) = id_1
+	.source(s_4) = id_8 .path(s_4) = p_4 .goal(s_4) = id_1
+	.source(s_5) = id_8 .path(s_5) = p_5 .goal(s_5) = id_1
+	.source(s_6) = id_8 .path(s_6) = p_6 .goal(s_6) = id_1
+
+	forall s : SPGschema . not source(s) = goal(s)
+    %(trajectors are on a unique location in the path)%
+
+	forall s : SPGschema; l : Node
+		. not (isFollowedBy(l, source(s), path(s))
+        	\/ isFollowedBy(goal(s), l, path(s)))
+           %(no location is followed by the source or follows the goal)%
+
+	forall s : SPGschema; l : Node
+		. inPath(l, path(s)) /\ not l = source(s) => exists! k : Node
+                . inPath(k, path(s)) /\ isFollowedBy(k, l, path(s))
+				%(any location on the path, except the source, 
+				follows exactly one location on the same path)%
+
+	forall s : SPGschema; l : Node
+		. inPath(l, path(s)) /\ not l = goal(s)
+     		=> exists! m : Node . inPath(m, path(s)) /\ isFollowedBy(l, m, path(s))
+	%(any location on the path, except the goal, is followed by exactly one location on the same path)%
+
+	forall k, l : Node; p : Path
+		. isFollowedBy(k, l, p) \/ isFollowedBy(l, k, p)
+     		=> inPath(k, p) /\ inPath(l, p)
+    %(any two contiguous locations form a path that contains them)%
+
+	forall p : Path . exists! s : SPGschema . path(s) = p 
+	
+	forall s : SPGschema . inPath(source(s), path(s)) 
+
+	forall s : SPGschema . inPath(goal(s), path(s)) 
+
+	forall s : SPGschema . exists! l : Node 
+		. inPath(l, path(s)) /\ placed(trajector(s), l)
+                                                  
+	forall k, l : Node; p : Path
+		. linked(k, l) <=> isFollowedBy(k, l, p) \/ isFollowedBy(l, k, p)
+
+
+	%( axioms incorporated from the LINKAGE )%
+
+	.anEnt(lsc_21) = id_2 .anotherEnt(lsc_21) = id_1 .link(lsc_21) = e_21
+	.anEnt(lsc_31) = id_3 .anotherEnt(lsc_31) = id_1 .link(lsc_31) = e_31
+	.anEnt(lsc_41) = id_4 .anotherEnt(lsc_41) = id_1 .link(lsc_41) = e_41
+	.anEnt(lsc_52) = id_5 .anotherEnt(lsc_52) = id_2 .link(lsc_52) = e_52
+	.anEnt(lsc_62) = id_6 .anotherEnt(lsc_62) = id_2 .link(lsc_62) = e_62
+	.anEnt(lsc_53) = id_5 .anotherEnt(lsc_53) = id_3 .link(lsc_53) = e_53
+	.anEnt(lsc_73) = id_7 .anotherEnt(lsc_73) = id_3 .link(lsc_73) = e_73
+	.anEnt(lsc_64) = id_6 .anotherEnt(lsc_64) = id_4 .link(lsc_64) = e_64
+	.anEnt(lsc_74) = id_7 .anotherEnt(lsc_74) = id_4 .link(lsc_74) = e_74
+	.anEnt(lsc_85) = id_8 .anotherEnt(lsc_85) = id_5 .link(lsc_85) = e_85
+	.anEnt(lsc_86) = id_8 .anotherEnt(lsc_86) = id_6 .link(lsc_86) = e_86
+	.anEnt(lsc_87) = id_8 .anotherEnt(lsc_87) = id_7 .link(lsc_87) = e_87
+
+	forall x, y : Node; s : LinkSchema
+		. linked(x, y) <=> (anEnt(s) = x /\ anotherEnt(s) = y)
+        	\/ (anEnt(s) = y /\ anotherEnt(s) = x)
+	%(linked entities are always part of some -not necessarily unique- link schema)%
+
+	forall s : LinkSchema . linked(anEnt(s), anotherEnt(s))
+	
+	forall l : Edge . exists! s : LinkSchema . link(s) = l 
+	
+	forall x, y : Node . linked(x, y) <=> linked(y, x)
+                                                            
+	forall x : Node . not linked(x, x) 
+
+
+%(proof obligations)%
+
+	%( symmetry for the "linked" predicate )%
+
+	.linked(id_1, id_2) %implied 
+	.linked(id_1, id_3) %implied
+	.linked(id_1, id_4) %implied
+	.linked(id_2, id_5) %implied
+	.linked(id_2, id_6) %implied
+	.linked(id_3, id_5) %implied
+	.linked(id_3, id_7) %implied
+	.linked(id_4, id_6) %implied
+	.linked(id_4, id_7) %implied
+	.linked(id_5, id_8) %implied
+	.linked(id_6, id_8) %implied
+	.linked(id_7, id_8) %implied
+
+	%( path axioms )%
+
+	.inPath(id_1,p_1) %implied
+	.inPath(id_2,p_1) %implied 
+	.inPath(id_5,p_1) %implied 
+	.inPath(id_8,p_1) %implied
+	.inPath(id_1,p_2) %implied 
+	.inPath(id_3,p_2) %implied 
+	.inPath(id_5,p_2) %implied 
+	.inPath(id_8,p_2) %implied
+	.inPath(id_1,p_3) %implied 
+	.inPath(id_2,p_3) %implied 
+	.inPath(id_6,p_3) %implied 
+	.inPath(id_8,p_3) %implied
+	.inPath(id_1,p_4) %implied 
+	.inPath(id_3,p_4) %implied 
+	.inPath(id_7,p_4) %implied 
+	.inPath(id_8,p_4) %implied
+	.inPath(id_1,p_5) %implied 
+	.inPath(id_4,p_5) %implied 
+	.inPath(id_7,p_5) %implied 
+	.inPath(id_8,p_5) %implied
+	.inPath(id_1,p_6) %implied 
+	.inPath(id_4,p_6) %implied 
+	.inPath(id_6,p_6) %implied 
+	.inPath(id_8,p_6) %implied
+
+
+end
+
+
+
+%%%%%%%% %( VERTICAL SCALE BLEND )%
+
+
+spec VERTICALITY =
+
+sorts 
+	VerticalitySchema, Axis, Mark
+ops   
+%( a VerticalitySchema has a unique axis and a unique base mark )%
+	axis : VerticalitySchema -> Axis
+	base: VerticalitySchema -> Mark
+
+preds 
+	inAxis: Mark * Axis
+  	above: Mark * Mark	
+
+    %( the base is a mark in the axis )%
+    forall s: VerticalitySchema; m:Mark
+    	.inAxis(base(s),axis(s))
+    	. not above(m,m)		 %( above is irreflexive )%
+    	%( any marks in the axis are above its base )%
+    	. inAxis(m,axis(s)) /\ not m = base(s) => above(m,base(s))	
+
+end
+
+
+%( instantiation of a VerticalitySchema )%
+
+spec A_VERTICALITY = VERTICALITY then
+     
+ops   
+	ax: Axis
+    	bs: Mark
+    	vs: VerticalitySchema
+
+%axioms%
+
+    .axis(vs)=ax .base(vs)=bs .inAxis(bs,ax)
+
+end
+
+
+
+spec SCALARITY =
+
+sorts 
+	Grade, ScaleSchema, Scale
+	%( ScaleSchema sort corresponds to the entire configuration defined 
+	in the specification, i.e., the image schema gestalt )%
+
+op   scale : ScaleSchema -> Scale
+
+preds
+	
+	inScale: Grade * Scale
+	%( predicate specifying that a Grade is "in" a Scale )%
+
+	more, less: Grade * Grade
+	%( predicates specifying that a Grade is "more" or less" than 
+	another one on the ScaleSchema )%
+
+%axioms% 
+	
+	forall s: ScaleSchema; x,y,z: Grade
+
+    	. forall c:Scale
+    	%( scales are always part of a unique SCALARITY schema )%
+    	. exists! sc:ScaleSchema . scale(sc) = c
+
+    	%( distinct grades of a scale are comparable )%
+    	. inScale(x,scale(s)) /\ inScale(y,scale(s)) /\ not x = y
+    	=> more(x,y) \/ more(y,x)
+
+    	%( two comparable grades are on the same scale of a SCALARITY schema )%
+    	. more(x,y) => exists! sc:ScaleSchema
+    	. inScale(x,scale(sc)) /\ inScale(y,scale(sc))
+     
+    	%( less is the inverse of more )%
+    	. less(x,y) <=> more(y,x)
+
+		%( ''more'' has the properties of a total order )%
+
+    	. not more(x,x)				%( irreflexive )%
+    	. more(x,y) /\ more(y,z) => more(x,z)	%( transitive )%
+		. more(x,y) => not more(y,x) %( asymmetry )%
+
+end 
+
+
+%( Instantiation of the SCALARITY schema )%
+
+spec A_SCALARITY = SCALARITY then
+
+ops
+
+	scsc: ScaleSchema
+
+	a_scale: Scale
+	%( instantiate a ScaleSchema and a Scale )%
+	
+	gr_1, gr_2, gr_3, gr_4: Grade
+	%( instantiate four Grades )%
+
+pred 
+	more: Grade * Grade 
+
+%axioms%
+	
+	.scale(scsc)=a_scale
+	.inScale(gr_1,a_scale) .inScale(gr_2,a_scale)
+	.inScale(gr_3,a_scale) .inScale(gr_4,a_scale)
+	%( declare that the four instantiated Grades are 
+	in the instantiated ScaleSchema )%
+
+	.more(gr_4,gr_3) .more(gr_3,gr_2) .more(gr_2,gr_1)
+	%( declare which Grade is "more" than which )%
+	
+end
+
+
+
+%(GENERIC SPACES)%
+
+%( The generic spaces identify sorts Mark (VERTICALITY), Grade (Scale) 
+and Part (Front-Back) into a sort named Degree )%
+
+spec GENERIC_4 =
+sort Degree, Grading, Schema
+
+preds
+	higher_deg: Degree * Degree
+	inGrading: Degree * Grading
+
+
+view 4a : GENERIC_4 to A_SCALARITY = 
+	Degree |-> Grade, Grading |-> Scale,
+	Schema |-> ScaleSchema, higher_deg |-> more, 
+	inGrading |-> inScale
+
+
+view 4b : GENERIC_4 to A_VERTICALITY = 
+	Degree |-> Mark, Grading |-> Axis,
+	Schema |-> VerticalitySchema, higher_deg |-> above, 
+	inGrading |-> inAxis
+
+
+
+spec GENERIC_5 =
+
+sort Degree
+
+ops
+	deg_1, deg_2a, deg_2b, deg_2c,
+	deg_3a, deg_3b, deg_3c, deg_4: Degree
+
+
+view 5a : GENERIC_5 to A_SCALARITY = 
+	Degree |-> Grade, deg_1 |-> gr_1, 
+	deg_3a |-> gr_2, deg_3b |-> gr_2, deg_3c |-> gr_2, 
+	deg_2a |-> gr_3, deg_2b |-> gr_3, deg_2c |-> gr_3, 
+	deg_4 |-> gr_4
+
+view 5b : GENERIC_5 to A_HASSE_CONFIG =
+	Degree |-> Point, 
+	deg_4 |-> c_1, 
+	deg_3a |-> c_2, deg_3b |-> c_3, deg_3c |-> c_4, 
+	deg_2a |-> c_5, deg_2b |-> c_6, deg_2c |-> c_7, 
+	deg_1 |-> c_8
+
+
+spec GENERIC_6 =
+
+sort Degree
+
+ops
+	deg_low: Degree
+
+
+view 6a : GENERIC_6 to A_SCALARITY = 
+	Degree |-> Grade, deg_low |-> gr_1
+
+view 6b : GENERIC_6 to A_VERTICALITY = 
+	Degree |-> Mark, deg_low |-> bs
+
+
+
+spec COLIMIT_VERTICAL_SCALE = 
+
+sorts Degree, Grading, Line, Schema
+
+ops
+	deg_1, deg_2, deg_3, deg_4 : Degree
+	a_scale, ax : Grading
+	r_21, r_31, r_41, r_52, r_53, r_62, 
+	r_64, r_73, r_74, r_85, r_86, r_87 : Line
+	scsc, vs : Schema
+
+	axis : Schema -> Grading
+	base : Schema -> Degree
+	scale : Schema -> Grading
+
+preds
+
+	__backPP__,__frontPP__,__leftPP__,__leftBackPP__,__leftFrontPP__,
+	__rightPP__,__rightBackPP__,__rightFrontPP__,intersectPP : Degree * Degree
+
+	__backLP__,__frontLP__,__leftLP__,__leftBackLP__,__leftFrontLP__,
+	__rightLP__,__rightBackLP__,__rightFrontLP__,intersectLP  : Line * Degree
+
+	__backLL__,__frontLL__,__leftLL__,__leftBackLL__,__leftFrontLL__,
+	__rightLL__,__rightBackLL__,__rightFrontLL__,intersectLL  : Line * Line
+
+	less, higher_deg : Degree * Degree
+	inScale : Degree * Grading
+
+
+%axioms%
+
+	%( axioms incorporated from the geometry, i.e., HASSE_CONFIG )%
+
+	.deg_4 rightBackPP deg_2 .deg_4 leftBackPP deg_2
+	.deg_4 rightBackPP deg_3 .deg_4 leftBackPP deg_3
+	.deg_2 rightBackPP deg_3 .deg_2 leftBackPP deg_3
+	.deg_2 rightBackPP deg_1 .deg_2 leftBackPP deg_1
+	.deg_3 rightBackPP deg_1 .deg_3 leftBackPP deg_1
+	.deg_2 leftFrontPP deg_4 .deg_2 rightFrontPP deg_4 
+	.deg_3 leftFrontPP deg_4 .deg_3 rightFrontPP deg_4 
+	.deg_3 leftFrontPP deg_2 .deg_3 rightFrontPP deg_2 
+	.deg_1 leftFrontPP deg_2 .deg_1 rightFrontPP deg_2 
+	.deg_1 leftFrontPP deg_3 .deg_1 rightFrontPP deg_3 
+
+	.deg_4 backPP deg_2 .deg_2 frontPP deg_4 
+	.deg_4 backPP deg_3 .deg_3 frontPP deg_4 
+	.deg_4 backPP deg_1 .deg_1 frontPP deg_4 
+	.deg_2 backPP deg_3 .deg_3 frontPP deg_2 
+	.deg_2 backPP deg_1 .deg_1 frontPP deg_2 
+	.deg_3 backPP deg_1 .deg_1 frontPP deg_3 
+	%( these two are most weird )%
+	.deg_2 leftPP deg_2 .deg_2 rightPP deg_2 
+	.deg_3 leftPP deg_3 .deg_3 rightPP deg_3
+
+	. intersectLP(r_21, deg_4) . intersectLP(r_21, deg_2) . intersectLP(r_31, deg_4) 
+	. intersectLP(r_31, deg_2) . intersectLP(r_41, deg_4) . intersectLP(r_41, deg_2) 
+	. intersectLP(r_52, deg_2) . intersectLP(r_52, deg_3) . intersectLP(r_53, deg_2) 
+	. intersectLP(r_53, deg_3) . intersectLP(r_62, deg_2) . intersectLP(r_62, deg_3) 
+	. intersectLP(r_64, deg_2) . intersectLP(r_64, deg_3) . intersectLP(r_73, deg_2) 
+	. intersectLP(r_73, deg_3) . intersectLP(r_74, deg_2) . intersectLP(r_74, deg_3) 
+	. intersectLP(r_85, deg_3) . intersectLP(r_85, deg_1) . intersectLP(r_86, deg_3) 
+	. intersectLP(r_86, deg_1) . intersectLP(r_87, deg_3) . intersectLP(r_87, deg_1) 
+	. intersectLL(r_53, r_62) . intersectLL(r_64, r_73) 
+
+
+	%( axioms incorporated from SCALARITY )%
+	
+	. scale(scsc) = a_scale 
+
+	. inScale(deg_1, a_scale) . inScale(deg_2, a_scale) 
+	. inScale(deg_3, a_scale) . inScale(deg_4, a_scale)
+	%(declare that the four instantiated Grades are in the instantiated ScaleSchema)%
+	
+	. higher_deg(deg_4, deg_3) . higher_deg(deg_3, deg_2) . higher_deg(deg_2, deg_1)
+    %(declare which Grade is "higher_deg" than which)%
+
+	forall c : Grading . exists! sc : Schema . scale(sc) = c
+    %(scales are always part of a unique SCALARITY schema)%
+
+	forall x, y : Degree . higher_deg(x, y)
+    => exists! sc : Schema . inScale(x, scale(sc)) /\ inScale(y, scale(sc))
+                                   
+	forall x, y : Degree . less(x, y) <=> higher_deg(y, x) 
+
+	forall x : Degree . not higher_deg(x, x) %(irreflexive)%
+
+	forall x, y, z : Degree . higher_deg(x, y) /\ higher_deg(y, z) => higher_deg(x, z) %(transitive)%
+
+	forall x, y : Degree . higher_deg(x, y) => not higher_deg(y, x) %(asymmetry)%
+
+	forall s : Schema; x, y : Degree
+		. inScale(x, scale(s)) /\ inScale(y, scale(s)) /\ not x = y
+     		=> higher_deg(x, y) \/ higher_deg(y, x)          
+
+	%( axioms incorporated from A_VERTICALITY )%
+
+	. axis(vs) = ax . base(vs) = deg_1 . inScale(deg_1, ax) 
+
+	forall m : Degree . not higher_deg(m, m) %(irreflexive)%
+
+	forall s : Schema . inScale(base(s), axis(s)) 
+
+	forall s : Schema; m : Degree
+		. inScale(m, axis(s)) /\ not m = base(s) => higher_deg(m, base(s))
+                                                          
+%( proof obligations )%
+
+	%( transitivity of 'higher_deg' of vertical scale )%
+
+	.higher_deg(deg_3, deg_1) %implied
+	.higher_deg(deg_4, deg_1) %implied
+	.higher_deg(deg_4, deg_2) %implied
+
+
+
